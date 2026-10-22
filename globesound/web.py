@@ -1,6 +1,7 @@
 """把坐标推给浏览器：一个只用标准库的小 HTTP 服务。
 
 GET /         网页地球仪（globesound/static/index.html）
+GET /countries.json  行政图国界（scripts/build_countries.py 生成）
 GET /events   Server-Sent Events，每 0.1 秒推一条 JSON：{"lat", "lon", "still", "source"}
 GET /stations.json  电台目录缓存（见 stations.py）；还没拉取完时返回 503，网页会重试
 只需要单向推送，所以用 SSE 而不是 WebSocket，浏览器断线会自己重连。
@@ -12,6 +13,11 @@ import json
 from pathlib import Path
 
 STATIC = Path(__file__).parent / "static"
+STATIC_FILES = {
+    "/": ("index.html", "text/html"),
+    "/index.html": ("index.html", "text/html"),
+    "/countries.json": ("countries.json", "application/json"),
+}
 
 
 class WebServer:
@@ -50,10 +56,12 @@ class WebServer:
                     body = self.stations_path.read_bytes()
                     writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n"
                                  b"Cache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body) + body)
-            elif path in ("/", "/index.html"):
-                body = (STATIC / "index.html").read_bytes()
-                writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
-                             b"Cache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body) + body)
+            elif path in STATIC_FILES:
+                name, ctype = STATIC_FILES[path]
+                body = (STATIC / name).read_bytes()
+                writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: %s; charset=utf-8\r\n"
+                             b"Cache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n"
+                             % (ctype.encode(), len(body)) + body)
             else:
                 writer.write(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
             await writer.drain()

@@ -1,0 +1,12 @@
+[
+  {"name": "深圳新闻广播", "url": "https://lhttp.qtfm.cn/live/1270/64k.mp3", "lat": 22.5431, "lon": 114.0579,
+   "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 50},
+  {"name": "深圳音乐广播 飞扬971", "url": "https://lhttp.qtfm.cn/live/1271/64k.mp3", "lat": 22.5431, "lon": 114.0579,
+   "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 40},
+  {"name": "深圳交通广播", "url": "https://lhttp-hw.qtfm.cn/live/1272/64k.mp3", "lat": 22.5431, "lon": 114.0579,
+   "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 30},
+  {"name": "深圳生活广播", "url": "https://lhttp.qtfm.cn/live/1273/64k.mp3", "lat": 22.5431, "lon": 114.0579,
+   "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 20},
+  {"name": "深圳龙岗星光991", "url": "https://lhttp.qingting.fm/live/20160/64k.mp3", "lat": 22.7206, "lon": 114.2468,
+   "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 10}
+]

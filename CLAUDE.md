@@ -49,7 +49,9 @@ globesound/cli.py         命令行：扫描 → 连接 → 标定 → 输出 JS
 globesound/sim.py         万向地球仪机构模型 + 虚拟传感器（--simulate），测试也用它
 globesound/web.py         --web：标准库 HTTP + SSE，每 0.1 秒推 {lat, lon, still, source}；/stations.json
 globesound/stations.py    电台目录：Radio Browser 拉取、按标签归曲风、缓存到 stations_cache.json（7 天）
-globesound/static/        网页地球仪（globe.gl，从 unpkg 加载，需要联网）
+globesound/stations_extra.json  手动补充的电台（自己定位置），目前有深圳 5 个台；改了它，缓存自动重新合并
+globesound/static/        网页地球仪（globe.gl，从 unpkg 加载，需要联网）；行政图样式，countries.json 是国界
+scripts/build_countries.py  生成 countries.json：Natural Earth 10m 中国立场版国界，简化到约 650KB
 tests/                    纯仿真测试，含万向地球仪的机构模型，不需要硬件
 docs/assembly.svg         装配示意图
 docs/research-notes.md    背景资料、备选方案、参考链接
@@ -68,13 +70,14 @@ python -m globesound                # 需要真实传感器；第一次运行会
 
 - 标准输出只放 JSON 行，提示信息都写到标准错误。不要打破这一点，下游会用管道读取。
 - `globe_calib.json` 和具体那台传感器的安装方式绑定，已经加进 `.gitignore`。
+- 网页是行政地球仪：按 MAPCOLOR7 给各国分色，国名用 HTML 元素（globe.gl 的文字图层不支持中文）。国界用 Natural Earth 的中国立场版（台湾、藏南、阿克赛钦归中国），但**没有画南海九段线**，不能当正式地图用。
 - 网页里"转动中"的坐标来自低通后的原始加速度（`Session.live`），手一晃就有误差；只有静止判断通过的读数（`Session.up`）才走 `emit()`。
 
 ## 下一步（按优先级）
 
 1. **实物联调**：确认连接和数据；核实上面"还没核实"的几项；跑一次完整标定，记录残差。
 2. **装配与配平**：按 README 的装配步骤做。如果打开后发现有贯穿球心的轴，模块可以改为扎在球心，不用配重。
-3. **应用层**：已定为收听当地电台，参考 RoamDial（roamdial.com）。网页地球仪上画出电台点；转动时只预览；球静止、读数出来后，锁定读数点 3° 内最近的电台，以及它 30 km 内的同城电台（按点击量排序，可用 ◀ ▶ 切换）；支持按曲风筛选；流 10 秒连不上就自动换下一个。已知缺口：Radio Browser 里带坐标的电台只有约 1.2 万个，中国只有 27 个（北京 3° 内一个都没有）。RoamDial 能有 3.5 万个，是因为它用 GeoNames 给没坐标的电台补了位置。其他可选扩展：
+3. **应用层**：已定为收听当地电台，参考 RoamDial（roamdial.com）。网页地球仪上画出电台点；转动时只预览；球静止、读数出来后，锁定读数点 3° 内最近的电台，以及它 30 km 内的同城电台（按点击量排序，可用 ◀ ▶ 切换）；支持按曲风筛选；流 10 秒连不上就自动换下一个。已知缺口：Radio Browser 里带坐标的电台只有约 1.2 万个，中国只有 27 个（北京 3° 内一个都没有）。深圳的台已经手动补进 `stations_extra.json`。RoamDial 能有 3.5 万个，是因为它用 GeoNames 给没坐标的电台补了位置。其他可选扩展：
    - 离线反查国家和城市（Natural Earth 或 GeoNames）
    - 手机端：做一个 Web Bluetooth 页面，在 Chrome 里直接连接传感器（iOS 要用 Bluefy 之类的浏览器）
    - 在电脑上起一个 WebSocket 服务，把坐标推给网页或手机

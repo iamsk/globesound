@@ -3,6 +3,9 @@
 Radio Browser（https://www.radio-browser.info）是社区维护的免费目录，RoamDial 用的也是它。
 只取带经纬度、没被标记为失效的电台（约 1.4 万个），每个电台按标签归到一个曲风。
 缓存默认放在 stations_cache.json，7 天内不重新拉取；拉取失败时退回旧缓存。
+
+Radio Browser 里很多电台没填坐标（中国尤其少），想要的电台可以手动写进
+stations_extra.json，自己给出位置。这个文件比缓存新时，缓存会自动重建。
 """
 from __future__ import annotations
 
@@ -15,6 +18,7 @@ MIRRORS = ["de1.api.radio-browser.info", "de2.api.radio-browser.info", "fi1.api.
 QUERY = "/json/stations/search?has_geo_info=true&hidebroken=true&limit=100000"
 USER_AGENT = "globesound/0.1"
 MAX_AGE_S = 7 * 24 * 3600
+EXTRA = Path(__file__).parent / "stations_extra.json"
 FIELDS = ["name", "url", "lat", "lon", "country", "cc", "genre", "lang", "bitrate", "codec", "clicks"]
 
 # 按顺序匹配标签里的关键词，命中第一个就定下曲风；都不中就是"综合"
@@ -68,6 +72,16 @@ def compact(raw: list[dict]) -> list[list]:
     return rows
 
 
+def merge_extra(rows: list[list], extra_path: Path = EXTRA) -> list[list]:
+    """把手动补充的电台并进来；流地址和目录里重复的，以手动的为准。"""
+    if not Path(extra_path).exists():
+        return rows
+    extra = [[e.get(f, d) for f, d in zip(FIELDS, ["", "", 0, 0, "", "", MIXED, "", 0, "", 0])]
+             for e in json.loads(Path(extra_path).read_text())]
+    urls = {r[1] for r in extra}
+    return extra + [r for r in rows if r[1] not in urls]
+
+
 def fetch(timeout: float = 60.0) -> list[dict]:
     last_err: Exception | None = None
     for host in MIRRORS:
@@ -80,21 +94,38 @@ def fetch(timeout: float = 60.0) -> list[dict]:
     raise RuntimeError(f"Radio Browser 的镜像都连不上：{last_err}")
 
 
-def load_or_fetch(path: Path, log=print) -> Path | None:
-    """确保缓存文件可用，返回它的路径；拉不到也没有旧缓存时返回 None。"""
-    path = Path(path)
-    if path.exists() and time.time() - path.stat().st_mtime < MAX_AGE_S:
-        return path
-    try:
-        log("从 Radio Browser 拉取电台目录……")
-        rows = compact(fetch())
-        path.write_text(json.dumps({"fetched": int(time.time()), "fields": FIELDS, "rows": rows},
-                                   ensure_ascii=False, separators=(",", ":")))
-        log(f"电台目录已缓存：{len(rows)} 个电台 → {path}")
-        return path
-    except Exception as e:
-        if path.exists():
-            log(f"电台目录更新失败，先用旧缓存：{e}")
+def load_or_fetch(path: Path, log=print, extra_path: Path = EXTRA) -> Path | None:
+    """确保缓存文件可用，返回它的路径；拉不到也没有旧缓存时返回 None。
+
+    目录 7 天重新拉一次（看文件里的 fetched 时间）；只有补充表改了的话，
+    不重新下载，把它重新并进现有缓存就行。
+    """
+    path, extra_path = Path(path), Path(extra_path)
+    old = None
+    if path.exists():
+        try:
+            old = json.loads(path.read_text())
+        except ValueError:
+            pass
+    if old is not None and time.time() - old.get("fetched", 0) < MAX_AGE_S:
+        if not extra_path.exists() or extra_path.stat().st_mtime <= path.stat().st_mtime:
             return path
-        log(f"电台目录拉取失败，网页上不会有电台：{e}")
+        rows, fetched = old["rows"], old["fetched"]
+    else:
+        try:
+            log("从 Radio Browser 拉取电台目录……")
+            rows, fetched = compact(fetch()), int(time.time())
+        except Exception as e:
+            if old is None:
+                log(f"电台目录拉取失败，网页上只有手动补充的电台：{e}")
+                rows, fetched = [], 0
+            else:
+                log(f"电台目录更新失败，先用旧缓存：{e}")
+                rows, fetched = old["rows"], old.get("fetched", 0)
+    rows = merge_extra(rows, extra_path)
+    if not rows:
         return None
+    path.write_text(json.dumps({"fetched": fetched, "fields": FIELDS, "rows": rows},
+                               ensure_ascii=False, separators=(",", ":")))
+    log(f"电台目录已缓存：{len(rows)} 个电台 → {path}")
+    return path
