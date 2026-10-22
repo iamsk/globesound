@@ -47,7 +47,8 @@ globesound/witmotion.py   数据包解析、BLE UUID、设备识别
 globesound/geo.py         经纬度与向量互转、标定（Wahba/SVD）、静止判断
 globesound/cli.py         命令行：扫描 → 连接 → 标定 → 输出 JSON；emit() 是给应用层的扩展点
 globesound/sim.py         万向地球仪机构模型 + 虚拟传感器（--simulate），测试也用它
-globesound/web.py         --web：标准库 HTTP + SSE，每 0.1 秒推 {lat, lon, still, source}
+globesound/web.py         --web：标准库 HTTP + SSE，每 0.1 秒推 {lat, lon, still, source}；/stations.json
+globesound/stations.py    电台目录：Radio Browser 拉取、按标签归曲风、缓存到 stations_cache.json（7 天）
 globesound/static/        网页地球仪（globe.gl，从 unpkg 加载，需要联网）
 tests/                    纯仿真测试，含万向地球仪的机构模型，不需要硬件
 docs/assembly.svg         装配示意图
@@ -73,7 +74,7 @@ python -m globesound                # 需要真实传感器；第一次运行会
 
 1. **实物联调**：确认连接和数据；核实上面"还没核实"的几项；跑一次完整标定，记录残差。
 2. **装配与配平**：按 README 的装配步骤做。如果打开后发现有贯穿球心的轴，模块可以改为扎在球心，不用配重。
-3. **应用层**：还没定。项目名叫 globesound，可能是按坐标播放当地的声音或电台，先问 King 再做。可选的扩展：
+3. **应用层**：已定为收听当地电台，参考 RoamDial（roamdial.com）。网页地球仪上画出电台点；转动时只预览；球静止、读数出来后，锁定读数点 3° 内最近的电台，以及它 30 km 内的同城电台（按点击量排序，可用 ◀ ▶ 切换）；支持按曲风筛选；流 10 秒连不上就自动换下一个。已知缺口：Radio Browser 里带坐标的电台只有约 1.2 万个，中国只有 27 个（北京 3° 内一个都没有）。RoamDial 能有 3.5 万个，是因为它用 GeoNames 给没坐标的电台补了位置。其他可选扩展：
    - 离线反查国家和城市（Natural Earth 或 GeoNames）
    - 手机端：做一个 Web Bluetooth 页面，在 Chrome 里直接连接传感器（iOS 要用 Bluefy 之类的浏览器）
    - 在电脑上起一个 WebSocket 服务，把坐标推给网页或手机

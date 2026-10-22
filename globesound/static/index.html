@@ -7,81 +7,134 @@
 <style>
   :root {
     --bg: #05070d;
-    --panel: rgba(14, 18, 28, 0.78);
+    --panel: rgba(14, 18, 28, 0.8);
     --border: rgba(255, 255, 255, 0.09);
     --text: #e8ecf3;
     --muted: #8a93a6;
     --accent: #ffb547;
     --live: #4fd1c5;
+    --play: #ff6b4a;
     --off: #6b7280;
     --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --serif: "Songti SC", "Noto Serif SC", Georgia, serif;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
     font: 14px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; overflow: hidden; }
   #globe { position: fixed; inset: 0; }
+  .glass { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  button { font: inherit; color: var(--text); cursor: pointer; }
 
-  .hud { position: fixed; top: 16px; left: 16px; width: min(320px, calc(100vw - 32px));
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px 18px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  /* 左上：读数 */
+  .hud { position: fixed; top: 16px; left: 16px; width: 280px; padding: 14px 16px; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .brand { font-weight: 600; letter-spacing: .02em; }
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
-    font-size: 12px; background: rgba(255,255,255,.06); color: var(--muted); }
+    font-size: 12px; background: rgba(255,255,255,.06); color: var(--muted); white-space: nowrap; }
   .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--off); }
   .pill.moving i { background: var(--live); }
   .pill.still i { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-  .coord { font: 600 30px/1.1 var(--mono); margin: 14px 0 2px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .coord { font: 600 26px/1.1 var(--mono); margin: 12px 0 2px; font-variant-numeric: tabular-nums; }
   .sub { color: var(--muted); font-size: 12px; }
-  .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 6px; }
-  ol { list-style: none; margin: 0; padding: 0; max-height: 30vh; overflow-y: auto; }
-  li { display: flex; justify-content: space-between; font: 13px/1.9 var(--mono); color: var(--muted);
+  .label { color: var(--muted); font-size: 11px; letter-spacing: .08em; margin: 14px 0 4px; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; justify-content: space-between; font: 12px/1.9 var(--mono); color: var(--muted);
     border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
-  li:first-child { color: var(--accent); }
-  li:first-child { border-top: 0; }
-  .empty { color: var(--muted); font-size: 12px; }
+  li:first-child { border-top: 0; color: var(--accent); }
+  .link { background: none; border: 0; padding: 0; color: var(--live); font-size: 12px; }
+  .link[hidden] { display: none; }
 
-  button { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 999px;
-    padding: 8px 16px; font: inherit; cursor: pointer; backdrop-filter: blur(12px); }
-  button:hover { border-color: rgba(255,255,255,.25); }
-  button[hidden] { display: none; }
+  /* 右上：曲风 */
+  .genres { position: fixed; top: 16px; right: 16px; max-width: 420px; display: flex; flex-wrap: wrap;
+    gap: 6px; justify-content: flex-end; }
+  .chip { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 4px 11px;
+    font-size: 12px; color: var(--muted); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .chip b { font-weight: 400; opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .chip.on { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .chip.on b { opacity: .7; }
 
+  /* 底部：电台卡片 */
+  .card { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    width: min(460px, calc(100vw - 32px)); padding: 16px 18px; }
+  .kicker { font: 11px/1 var(--mono); letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+  .kicker .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--off); margin-right: 6px; vertical-align: 1px; }
+  .kicker.playing .dot { background: var(--play); box-shadow: 0 0 8px var(--play); }
+  .kicker.preview .dot { background: var(--live); }
+  .kicker.locked .dot { background: var(--accent); }
+  .name { font: 600 24px/1.25 var(--serif); margin: 8px 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .ctl { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: rgba(255,255,255,.05);
+    display: grid; place-items: center; font-size: 14px; }
+  .ctl:disabled { opacity: .35; cursor: default; }
+  .ctl.main { width: 46px; height: 46px; background: var(--play); border-color: var(--play); font-size: 16px; }
+  .count { color: var(--muted); font-size: 12px; margin-left: auto; text-align: right; }
+  .start { display: block; width: 100%; margin-top: 14px; padding: 11px; border: 0; border-radius: 999px;
+    background: var(--play); font-weight: 600; }
+  .start[hidden], .controls[hidden] { display: none; }
+
+  /* 准星 */
   .reticle { width: 34px; height: 34px; transform: translate(-50%, -50%); pointer-events: none; position: relative; }
   .reticle::before, .reticle::after { content: ""; position: absolute; inset: 0; border-radius: 50%; }
   .reticle::before { border: 2px solid var(--live); box-shadow: 0 0 10px rgba(79,209,197,.6); }
   .reticle::after { inset: 14px; background: var(--live); }
   .reticle.still::before { border-color: var(--accent); box-shadow: 0 0 12px rgba(255,181,71,.7); }
   .reticle.still::after { background: var(--accent); }
+  .tag { position: absolute; left: 44px; top: 50%; transform: translateY(-50%); white-space: nowrap;
+    font-size: 13px; text-shadow: 0 1px 4px #000, 0 0 12px #000; }
+  .tag small { display: block; font: 10px/1.4 var(--mono); letter-spacing: .1em; color: var(--muted); }
 
-  @media (max-width: 520px) {
-    .hud { top: auto; bottom: 70px; }
-    .coord { font-size: 24px; }
-    ol { max-height: 18vh; }
+  @media (max-width: 640px) {
+    .hud { width: auto; right: 16px; padding: 10px 14px; }
+    .hud .label, .hud ol { display: none; }
+    .coord { font-size: 20px; margin-top: 8px; }
+    .genres { top: auto; bottom: 214px; left: 16px; right: 16px; max-width: none; flex-wrap: nowrap;
+      overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
+    .chip { flex: none; }
+    .name { font-size: 20px; }
   }
 </style>
 </head>
 <body>
 <div id="globe"></div>
 
-<section class="hud">
+<section class="hud glass">
   <div class="row">
     <span class="brand">globesound</span>
     <span class="pill" id="status"><i></i><span>等待数据</span></span>
   </div>
   <div class="coord" id="coord">—</div>
-  <div class="sub" id="source">还没有连上本机服务</div>
+  <div class="row">
+    <span class="sub" id="source">还没有连上本机服务</span>
+    <button class="link" id="follow" hidden>回到跟随</button>
+  </div>
   <div class="label">读数（球静止约 1 秒后记一次）</div>
-  <ol id="fixes"><li class="empty" style="color:var(--muted)">还没有读数</li></ol>
+  <ol id="fixes"></ol>
 </section>
 
-<button id="follow" hidden>回到跟随</button>
+<nav class="genres" id="genres"></nav>
+
+<section class="card glass">
+  <div class="kicker" id="kicker"><span class="dot"></span><span id="kickerText">电台目录加载中</span></div>
+  <div class="name" id="stName">把地球仪上的一个地方转到最高点</div>
+  <div class="meta" id="stMeta">球停稳约 1 秒，就会锁定离读数点最近的电台</div>
+  <button class="start" id="start">开始收听</button>
+  <div class="controls" id="controls" hidden>
+    <button class="ctl" id="prev" title="同城上一个（←）">◀</button>
+    <button class="ctl main" id="toggle" title="播放 / 暂停（空格）">❚❚</button>
+    <button class="ctl" id="next" title="同城下一个（→）">▶</button>
+    <span class="count" id="count"></span>
+  </div>
+</section>
 
 <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js"></script>
 <script>
 const IMG = "https://unpkg.com/three-globe@2.45.6/example/img/";
 const ALT = innerWidth < innerHeight ? 3.4 : 2.2;  // 相机离球面的高度（以球半径计），竖屏拉远一点才放得下整个球
-const SMOOTH = 0.18;    // 每帧向目标靠近的比例，配合 10Hz 数据做插值
+const SMOOTH = 0.18;     // 每帧向目标靠近的比例，配合 10Hz 数据做插值
+const LOCK_DEG = 3;      // 读数点这么近的范围内没有电台，就不锁定（标定残差一般 1–3°）
+const CITY_KM = 30;      // 离最近电台这么近的都算"同城"，可以用 ◀ ▶ 切换
 
 const $ = id => document.getElementById(id);
 const fmt = (lat, lon) =>
@@ -94,11 +147,15 @@ const toLatLon = v => {
   const n = Math.hypot(...v);
   return [Math.asin(v[2] / n) * 180 / Math.PI, Math.atan2(v[1], v[0]) * 180 / Math.PI];
 };
+const dot = (a, b) => (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / Math.hypot(...a);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// ---------- 地球 ----------
 const reticle = document.createElement("div");
 reticle.className = "reticle";
+reticle.innerHTML = '<div class="tag"></div>';
+const tag = reticle.firstChild;  // 准星要等 globe.gl 挂进 DOM 才查得到，所以直接持有引用
 const marker = { lat: 0, lng: 0 };
-let rings = [];
 
 const world = new Globe($("globe"), { animateIn: false })
   .globeImageUrl(IMG + "earth-blue-marble.jpg")
@@ -108,16 +165,22 @@ const world = new Globe($("globe"), { animateIn: false })
   .htmlElementsData([marker])
   .htmlElement(() => reticle)
   .htmlTransitionDuration(0)
-  .ringsData(rings)
-  .ringColor(() => t => `rgba(255,181,71,${1 - t})`)
-  .ringMaxRadius(6)
-  .ringPropagationSpeed(4)
-  .ringRepeatPeriod(900);
+  .pointsMerge(true)
+  .pointLat("lat").pointLng("lon")
+  .pointAltitude(0.003)
+  .pointRadius(0.22)
+  .pointColor(() => "rgba(255, 214, 150, 0.85)")
+  .pointsTransitionDuration(0)
+  .ringLat("lat").ringLng("lon")
+  .ringColor(() => t => `rgba(255,107,74,${1 - t})`)
+  .ringMaxRadius(4)
+  .ringPropagationSpeed(3)
+  .ringRepeatPeriod(1100);
 world.pointOfView({ lat: 20, lng: 100, altitude: ALT });
 // globe.gl 只在初始化时取一次窗口尺寸；页面在后台打开或手机转屏时要自己跟上
 new ResizeObserver(() => world.width($("globe").clientWidth).height($("globe").clientHeight)).observe($("globe"));
 
-// 用户拖动或缩放就暂停跟随，点按钮恢复
+// 用户拖动或缩放就暂停跟随
 let follow = true;
 const pause = () => { follow = false; $("follow").hidden = false; };
 $("globe").addEventListener("pointerdown", pause);
@@ -137,18 +200,166 @@ function frame() {
 }
 requestAnimationFrame(frame);
 
-// 读数列表：静止时的坐标，只在和上一条不同的时候追加
+// ---------- 电台目录 ----------
+let stations = [], visible = [], genre = "全部";
+
+async function loadStations() {
+  try {
+    const r = await fetch("/stations.json");
+    if (r.status === 503) return setTimeout(loadStations, 3000);
+    const d = await r.json();
+    stations = d.rows.map(row => {
+      const s = Object.fromEntries(d.fields.map((f, i) => [f, row[i]]));
+      s.v = toVec(s.lat, s.lon);
+      return s;
+    });
+    renderGenres();
+    applyFilter();
+    setKicker("", `${stations.length.toLocaleString()} 个电台`);
+    if (lastStill) lockAt(target);  // 打开网页时球本来就停着，不用等它再动一次
+  } catch (e) {
+    setKicker("", "电台目录加载失败，5 秒后重试");
+    setTimeout(loadStations, 5000);
+  }
+}
+
+function renderGenres() {
+  const counts = {};
+  for (const s of stations) counts[s.genre] = (counts[s.genre] || 0) + 1;
+  const list = [["全部", stations.length], ...Object.entries(counts).sort((a, b) => b[1] - a[1])];
+  $("genres").innerHTML = list.map(([g, n]) =>
+    `<button class="chip${g === genre ? " on" : ""}" data-g="${esc(g)}">${esc(g)}<b>${n.toLocaleString()}</b></button>`).join("");
+}
+$("genres").onclick = e => {
+  const b = e.target.closest(".chip");
+  if (!b) return;
+  genre = b.dataset.g;
+  renderGenres();
+  applyFilter();
+  if (lastStill) lockAt(target);  // 换了曲风，就在当前位置重新挑
+};
+
+function applyFilter() {
+  visible = genre === "全部" ? stations : stations.filter(s => s.genre === genre);
+  world.pointsData(visible);
+}
+
+// 离读数点最近的电台，以及和它"同城"的那一组（按点击量排序）
+function groupAt(v) {
+  let best = null, bd = -2;
+  for (const s of visible) { const d = dot(s.v, v); if (d > bd) { bd = d; best = s; } }
+  if (!best || Math.acos(Math.min(1, bd)) * 180 / Math.PI > LOCK_DEG) return [];
+  const cosCity = Math.cos(CITY_KM / 6371);
+  return visible.filter(s => dot(s.v, best.v) > cosCity).sort((a, b) => b.clicks - a.clicks);
+}
+
+// ---------- 播放 ----------
+const audio = new Audio();
+audio.preload = "none";
+let unlocked = false;   // 浏览器要求先有一次用户点击，才允许出声
+let group = [], idx = 0, cur = null;
+
+function setKicker(cls, text) {
+  $("kicker").className = "kicker " + cls;
+  $("kickerText").textContent = text;
+}
+const metaOf = s => [s.country, s.genre, s.lang, s.bitrate ? `${s.bitrate} kbps` : "", s.codec]
+  .filter(Boolean).join(" · ");
+
+function showStation(s, state) {
+  $("stName").textContent = s.name;
+  $("stMeta").textContent = metaOf(s);
+  tag.innerHTML = `<small>${state === "preview" ? "预览" : "已锁定"} · ${esc(s.genre)}</small>${esc(s.name)}`;
+}
+
+function renderCard() {
+  $("controls").hidden = !unlocked || !cur;
+  $("start").hidden = unlocked;
+  $("prev").disabled = $("next").disabled = group.length < 2;
+  $("count").textContent = group.length > 1 ? `同城 ${idx + 1} / ${group.length}` : group.length ? "附近只有这一个" : "";
+  $("toggle").textContent = audio.paused ? "▶" : "❚❚";
+  world.ringsData(cur ? [cur] : []);
+}
+
+function play(i) {
+  idx = (i + group.length) % group.length;
+  cur = group[idx];
+  showStation(cur, "locked");
+  if (unlocked) {
+    setKicker("locked", "连接中……");
+    audio.src = cur.url;
+    audio.play().catch(() => {});  // 失败交给 onerror 处理
+    // 有的流既不报错也不出声，一直挂着；超时就当连不上
+    const st = cur;
+    clearTimeout(connectTimer);
+    connectTimer = setTimeout(() => { if (cur === st && audio.readyState < 3) audio.onerror(); }, CONNECT_MS);
+  } else {
+    setKicker("locked", "已锁定 · 点下面开始收听");
+  }
+  renderCard();
+}
+
+const CONNECT_MS = 10000;
+let failStreak = 0, connectTimer = null;
+audio.onplaying = () => { clearTimeout(connectTimer); failStreak = 0; setKicker("playing", "正在播放"); renderCard(); };
+audio.onpause = renderCard;
+audio.onerror = () => {
+  clearTimeout(connectTimer);
+  if (!cur || !audio.src) return;
+  failStreak++;
+  if (failStreak < group.length) {
+    setKicker("", `${cur.name} 连不上，换下一个`);
+    setTimeout(() => play(idx + 1), 400);
+  } else {
+    setKicker("", "这一带的电台都连不上，换个地方试试");
+    renderCard();
+  }
+};
+
+$("start").onclick = () => {
+  unlocked = true;
+  if (cur) play(idx); else renderCard();
+};
+$("toggle").onclick = () => { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); };
+$("prev").onclick = () => { failStreak = 0; play(idx - 1); };
+$("next").onclick = () => { failStreak = 0; play(idx + 1); };
+addEventListener("keydown", e => {
+  if (!cur || !unlocked) return;
+  if (e.key === "ArrowLeft") $("prev").click();
+  else if (e.key === "ArrowRight") $("next").click();
+  else if (e.key === " ") { e.preventDefault(); $("toggle").click(); }
+});
+
+// 球静止 → 锁定读数点附近的电台。已经在播的电台还在这一组里，就不打断
+function lockAt(v) {
+  if (!v || !visible.length) return;
+  const g = groupAt(v);
+  if (!g.length) {
+    tag.innerHTML = `<small>${LOCK_DEG}° 内没有${genre === "全部" ? "" : esc(genre)}电台</small>`;
+    if (!cur) { $("stName").textContent = "这里附近没有电台"; $("stMeta").textContent = "换个地方，或者换个曲风"; }
+    return;
+  }
+  if (cur && g.includes(cur)) { group = g; idx = g.indexOf(cur); showStation(cur, "locked"); renderCard(); return; }
+  group = g; failStreak = 0;
+  play(0);
+}
+
+// 转动中只预览，不切台，免得一路转过去一路乱跳
+function previewAt(v) {
+  if (!visible.length) return;
+  const g = groupAt(v);
+  tag.innerHTML = g.length ? `<small>预览 · ${esc(g[0].genre)}</small>${esc(g[0].name)}` : "";
+}
+
+// ---------- 读数 ----------
 const fixes = [];
-let wasStill = false;
 function addFix(lat, lon) {
   const last = fixes[0];
   if (last && Math.abs(last.lat - lat) < 0.15 && Math.abs(last.lon - lon) < 0.15) return;
   fixes.unshift({ lat, lon, t: new Date() });
-  fixes.length = Math.min(fixes.length, 30);
+  fixes.length = Math.min(fixes.length, 4);
   $("fixes").innerHTML = fixes.map(f =>
     `<li><span>${fmt(f.lat, f.lon)}</span><span>${f.t.toLocaleTimeString("zh-CN", { hour12: false })}</span></li>`).join("");
-  rings = [{ lat, lng: lon }];
-  world.ringsData(rings);
 }
 
 function setStatus(cls, text) {
@@ -156,21 +367,24 @@ function setStatus(cls, text) {
   $("status").lastElementChild.textContent = text;
 }
 
-let staleTimer = null;
+let lastStill = false, staleTimer = null, lastPreview = 0;
 const es = new EventSource("/events");
 es.onmessage = e => {
   const s = JSON.parse(e.data);
   target = toVec(s.lat, s.lon);
   $("coord").textContent = fmt(s.lat, s.lon);
-  $("source").textContent = s.source === "sim" ? "数据来源：模拟器（python -m globesound --simulate）" : "数据来源：BWT901BLECL 传感器";
+  $("source").textContent = s.source === "sim" ? "数据来源：模拟器" : "数据来源：BWT901BLECL";
   setStatus(s.still ? "still" : "moving", s.still ? "静止 · 已读数" : "转动中");
   reticle.className = "reticle" + (s.still ? " still" : "");
-  if (s.still && !wasStill) addFix(s.lat, s.lon);
-  wasStill = s.still;
+  if (s.still && !lastStill) { addFix(s.lat, s.lon); lockAt(target); }
+  if (!s.still && performance.now() - lastPreview > 250) { lastPreview = performance.now(); previewAt(target); }
+  lastStill = s.still;
   clearTimeout(staleTimer);
   staleTimer = setTimeout(() => setStatus("", "没有新数据"), 1500);
 };
 es.onerror = () => { setStatus("", "连接断开，重连中"); $("source").textContent = "确认 python -m globesound --web 还在运行"; };
+
+loadStations();
 </script>
 </body>
 </html>

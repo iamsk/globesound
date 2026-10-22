@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 # 标定结果和具体那台传感器的安装方式绑定，不进版本库
 globe_calib.json
+# 电台目录缓存，可以随时重新拉取
+stations_cache.json

@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from bleak import BleakClient, BleakScanner
 
-from . import witmotion
+from . import stations, witmotion
 from .geo import CALIBRATION_POINTS, RMS_WARN_DEG, Calibration, StillDetector, calibrate
 from .sim import TOUR, SimulatedGlobe
 from .web import WebServer
@@ -93,6 +93,10 @@ async def readout(session: Session, cal: Calibration, args, alive, source: str) 
         web = WebServer(args.web_host, args.web)
         await web.start()
         log(f"网页地球仪：{web.url}")
+
+        async def load_stations():
+            web.stations_path = await asyncio.to_thread(stations.load_or_fetch, Path(args.stations_file), log)
+        asyncio.create_task(load_stations())
     log("开始读数：把地点转到子午圈最高点正下方，松手约 1 秒后输出坐标。Ctrl+C 退出。")
     last = None
     while alive():
@@ -146,6 +150,7 @@ def main() -> None:
     p.add_argument("--web", type=int, nargs="?", const=8765, metavar="PORT",
                    help="同时开网页地球仪（默认端口 8765），浏览器打开提示的地址")
     p.add_argument("--web-host", default="127.0.0.1", help="网页服务监听地址；手机要访问就用 0.0.0.0")
+    p.add_argument("--stations-file", default="stations_cache.json", help="电台目录缓存（Radio Browser，7 天刷新一次）")
     p.add_argument("--simulate", action="store_true", help="不连传感器，用虚拟地球仪产生数据")
     p.add_argument("--seed", type=int, help="模拟模式的随机种子（决定虚拟传感器的安装姿态）")
     args = p.parse_args()

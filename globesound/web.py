@@ -2,6 +2,7 @@
 
 GET /         网页地球仪（globesound/static/index.html）
 GET /events   Server-Sent Events，每 0.1 秒推一条 JSON：{"lat", "lon", "still", "source"}
+GET /stations.json  电台目录缓存（见 stations.py）；还没拉取完时返回 503，网页会重试
 只需要单向推送，所以用 SSE 而不是 WebSocket，浏览器断线会自己重连。
 """
 from __future__ import annotations
@@ -18,6 +19,7 @@ class WebServer:
         self.host, self.port = host, port
         self._queues: set[asyncio.Queue] = set()
         self._last: str | None = None
+        self.stations_path: Path | None = None  # 电台目录拉取完成后由调用方填上
 
     @property
     def url(self) -> str:
@@ -41,6 +43,13 @@ class WebServer:
             path = parts[1].split("?")[0] if len(parts) > 1 else "/"
             if path == "/events":
                 await self._stream(writer)
+            elif path == "/stations.json":
+                if self.stations_path is None or not self.stations_path.exists():
+                    writer.write(b"HTTP/1.1 503 Service Unavailable\r\nRetry-After: 3\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                else:
+                    body = self.stations_path.read_bytes()
+                    writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n"
+                                 b"Cache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body) + body)
             elif path in ("/", "/index.html"):
                 body = (STATIC / "index.html").read_bytes()
                 writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
