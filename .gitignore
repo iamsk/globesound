@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# 标定结果和具体那台传感器的安装方式绑定，不进版本库
+globe_calib.json

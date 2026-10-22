@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>globesound 地球仪</title>
+<style>
+  :root {
+    --bg: #05070d;
+    --panel: rgba(14, 18, 28, 0.78);
+    --border: rgba(255, 255, 255, 0.09);
+    --text: #e8ecf3;
+    --muted: #8a93a6;
+    --accent: #ffb547;
+    --live: #4fd1c5;
+    --off: #6b7280;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; overflow: hidden; }
+  #globe { position: fixed; inset: 0; }
+
+  .hud { position: fixed; top: 16px; left: 16px; width: min(320px, calc(100vw - 32px));
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .brand { font-weight: 600; letter-spacing: .02em; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; background: rgba(255,255,255,.06); color: var(--muted); }
+  .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--off); }
+  .pill.moving i { background: var(--live); }
+  .pill.still i { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .coord { font: 600 30px/1.1 var(--mono); margin: 14px 0 2px; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 6px; }
+  ol { list-style: none; margin: 0; padding: 0; max-height: 30vh; overflow-y: auto; }
+  li { display: flex; justify-content: space-between; font: 13px/1.9 var(--mono); color: var(--muted);
+    border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  li:first-child { color: var(--accent); }
+  li:first-child { border-top: 0; }
+  .empty { color: var(--muted); font-size: 12px; }
+
+  button { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 16px; font: inherit; cursor: pointer; backdrop-filter: blur(12px); }
+  button:hover { border-color: rgba(255,255,255,.25); }
+  button[hidden] { display: none; }
+
+  .reticle { width: 34px; height: 34px; transform: translate(-50%, -50%); pointer-events: none; position: relative; }
+  .reticle::before, .reticle::after { content: ""; position: absolute; inset: 0; border-radius: 50%; }
+  .reticle::before { border: 2px solid var(--live); box-shadow: 0 0 10px rgba(79,209,197,.6); }
+  .reticle::after { inset: 14px; background: var(--live); }
+  .reticle.still::before { border-color: var(--accent); box-shadow: 0 0 12px rgba(255,181,71,.7); }
+  .reticle.still::after { background: var(--accent); }
+
+  @media (max-width: 520px) {
+    .hud { top: auto; bottom: 70px; }
+    .coord { font-size: 24px; }
+    ol { max-height: 18vh; }
+  }
+</style>
+</head>
+<body>
+<div id="globe"></div>
+
+<section class="hud">
+  <div class="row">
+    <span class="brand">globesound</span>
+    <span class="pill" id="status"><i></i><span>等待数据</span></span>
+  </div>
+  <div class="coord" id="coord">—</div>
+  <div class="sub" id="source">还没有连上本机服务</div>
+  <div class="label">读数（球静止约 1 秒后记一次）</div>
+  <ol id="fixes"><li class="empty" style="color:var(--muted)">还没有读数</li></ol>
+</section>
+
+<button id="follow" hidden>回到跟随</button>
+
+<script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js"></script>
+<script>
+const IMG = "https://unpkg.com/three-globe@2.45.6/example/img/";
+const ALT = innerWidth < innerHeight ? 3.4 : 2.2;  // 相机离球面的高度（以球半径计），竖屏拉远一点才放得下整个球
+const SMOOTH = 0.18;    // 每帧向目标靠近的比例，配合 10Hz 数据做插值
+
+const $ = id => document.getElementById(id);
+const fmt = (lat, lon) =>
+  `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(1)}°${lon >= 0 ? "E" : "W"}`;
+const toVec = (lat, lon) => {
+  const a = lat * Math.PI / 180, b = lon * Math.PI / 180;
+  return [Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a)];
+};
+const toLatLon = v => {
+  const n = Math.hypot(...v);
+  return [Math.asin(v[2] / n) * 180 / Math.PI, Math.atan2(v[1], v[0]) * 180 / Math.PI];
+};
+
+const reticle = document.createElement("div");
+reticle.className = "reticle";
+const marker = { lat: 0, lng: 0 };
+let rings = [];
+
+const world = new Globe($("globe"), { animateIn: false })
+  .globeImageUrl(IMG + "earth-blue-marble.jpg")
+  .bumpImageUrl(IMG + "earth-topology.png")
+  .backgroundImageUrl(IMG + "night-sky.png")
+  .atmosphereColor("#7fb8ff")
+  .htmlElementsData([marker])
+  .htmlElement(() => reticle)
+  .htmlTransitionDuration(0)
+  .ringsData(rings)
+  .ringColor(() => t => `rgba(255,181,71,${1 - t})`)
+  .ringMaxRadius(6)
+  .ringPropagationSpeed(4)
+  .ringRepeatPeriod(900);
+world.pointOfView({ lat: 20, lng: 100, altitude: ALT });
+// globe.gl 只在初始化时取一次窗口尺寸；页面在后台打开或手机转屏时要自己跟上
+new ResizeObserver(() => world.width($("globe").clientWidth).height($("globe").clientHeight)).observe($("globe"));
+
+// 用户拖动或缩放就暂停跟随，点按钮恢复
+let follow = true;
+const pause = () => { follow = false; $("follow").hidden = false; };
+$("globe").addEventListener("pointerdown", pause);
+$("globe").addEventListener("wheel", pause, { passive: true });
+$("follow").onclick = () => { follow = true; $("follow").hidden = true; };
+
+let target = null, current = null;
+function frame() {
+  if (target) {
+    current = current ? current.map((c, i) => c + SMOOTH * (target[i] - c)) : target.slice();
+    const [lat, lng] = toLatLon(current);
+    marker.lat = lat; marker.lng = lng;
+    world.htmlElementsData([marker]);
+    if (follow) world.pointOfView({ lat, lng, altitude: world.pointOfView().altitude || ALT }, 0);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// 读数列表：静止时的坐标，只在和上一条不同的时候追加
+const fixes = [];
+let wasStill = false;
+function addFix(lat, lon) {
+  const last = fixes[0];
+  if (last && Math.abs(last.lat - lat) < 0.15 && Math.abs(last.lon - lon) < 0.15) return;
+  fixes.unshift({ lat, lon, t: new Date() });
+  fixes.length = Math.min(fixes.length, 30);
+  $("fixes").innerHTML = fixes.map(f =>
+    `<li><span>${fmt(f.lat, f.lon)}</span><span>${f.t.toLocaleTimeString("zh-CN", { hour12: false })}</span></li>`).join("");
+  rings = [{ lat, lng: lon }];
+  world.ringsData(rings);
+}
+
+function setStatus(cls, text) {
+  $("status").className = "pill " + cls;
+  $("status").lastElementChild.textContent = text;
+}
+
+let staleTimer = null;
+const es = new EventSource("/events");
+es.onmessage = e => {
+  const s = JSON.parse(e.data);
+  target = toVec(s.lat, s.lon);
+  $("coord").textContent = fmt(s.lat, s.lon);
+  $("source").textContent = s.source === "sim" ? "数据来源：模拟器（python -m globesound --simulate）" : "数据来源：BWT901BLECL 传感器";
+  setStatus(s.still ? "still" : "moving", s.still ? "静止 · 已读数" : "转动中");
+  reticle.className = "reticle" + (s.still ? " still" : "");
+  if (s.still && !wasStill) addFix(s.lat, s.lon);
+  wasStill = s.still;
+  clearTimeout(staleTimer);
+  staleTimer = setTimeout(() => setStatus("", "没有新数据"), 1500);
+};
+es.onerror = () => { setStatus("", "连接断开，重连中"); $("source").textContent = "确认 python -m globesound --web 还在运行"; };
+</script>
+</body>
+</html>
