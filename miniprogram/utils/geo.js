@@ -533,11 +533,11 @@ class Calibration {
  */
 class StillDetector {
   /**
-   * @param {number} gyroMaxDps - 陀螺仪静止阈值（度/秒），默认3.0
-   * @param {number} accTolG - 加速度计容差（g），默认0.05
-   * @param {number} window - 静止采样窗口大小，默认10
+   * @param {number} gyroMaxDps - 陀螺仪静止阈值（度/秒），适度放宽容忍手部微颤（默认5.0）
+   * @param {number} accTolG - 加速度计容差（g），兼容传感器零偏（默认0.15）
+   * @param {number} window - 静止采样窗口大小（默认6，约0.6秒）
    */
-  constructor(gyroMaxDps = 3.0, accTolG = 0.05, window = 10) {
+  constructor(gyroMaxDps = 5.0, accTolG = 0.15, window = 6) {
     this.gyroMaxDps = gyroMaxDps
     this.accTolG = accTolG
     this.window = window

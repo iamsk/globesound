@@ -57,6 +57,15 @@ class WebServer:
                     body = self.stations_path.read_bytes()
                     writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n"
                                  b"Cache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body) + body)
+            elif path.startswith("/audio/kids/") and path.endswith(".mp3"):
+                audio_file = STATIC / path.lstrip("/")
+                if audio_file.exists():
+                    body = audio_file.read_bytes()
+                    writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: audio/mpeg\r\n"
+                                 b"Cache-Control: public, max-age=86400\r\nContent-Length: %d\r\nConnection: close\r\n\r\n"
+                                 % len(body) + body)
+                else:
+                    writer.write(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
             elif path in STATIC_FILES:
                 name, ctype = STATIC_FILES[path]
                 body = (STATIC / name).read_bytes()

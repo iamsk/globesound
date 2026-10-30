@@ -102,11 +102,12 @@ Page({
   },
 
   onLoad() {
-    this.detector = new StillDetector()
+    this.detector = new StillDetector(5.0, 0.15, 6)
     this.liveVec = null
     this.targetVec = null
     this.lastStill = false
     this.lastPreviewTime = 0
+    this.lastLiveSetDataTime = 0
     this.connectTimer = null
     this.failStreak = 0
 
@@ -238,7 +239,8 @@ Page({
     })
 
     if (playSound) {
-      synth.playByKey(zone.sfx || 'cheer')
+      // 播放超高品质 edge-tts 故事语音
+      synth.playZoneAudio(zone.id)
       try {
         wx.vibrateShort({ type: 'medium' })
       } catch (e) {
@@ -251,7 +253,8 @@ Page({
     const cur = this.data.currentKidsZone
     if (!cur) return
 
-    synth.playByKey(cur.sfx || 'cheer')
+    // 播放该生态区的真人故事讲解
+    synth.playZoneAudio(cur.id)
     try {
       wx.vibrateShort({ type: 'medium' })
     } catch (e) {
@@ -416,7 +419,7 @@ Page({
 
     // 2. 实时加速度滤波
     const n = norm(pkt.acc)
-    if (n > 0.7 && n < 1.3) {
+    if (n > 0.6 && n < 1.4) {
       const v = [pkt.acc[0] / n, pkt.acc[1] / n, pkt.acc[2] / n]
       if (!this.liveVec) {
         this.liveVec = v
@@ -429,31 +432,38 @@ Page({
       }
     }
 
-    if (!this.calibration) return
+    // 3. 计算读数点经纬度（带未标定自动几何兜底）
+    const curSensorVec = up || this.liveVec
+    if (!curSensorVec) return
 
-    // 3. 计算读数点经纬度
+    let currentLat, currentLon
+    if (this.calibration) {
+      const res = this.calibration.toLatlon(curSensorVec)
+      currentLat = res.lat
+      currentLon = res.lon
+    } else {
+      // 未完成 4 点标定时的粗略方位映射，确保转动时也能实时感应与切卡
+      const res = vecToLatlon(curSensorVec)
+      currentLat = res.lat
+      currentLon = res.lon
+    }
+
+    this.targetVec = latlonToVec(currentLat, currentLon)
+
     if (up) {
-      const { lat, lon } = this.calibration.toLatlon(up)
-      this.targetVec = latlonToVec(lat, lon)
-      this.onStillReading(lat, lon)
-    } else if (this.liveVec) {
-      const { lat, lon } = this.calibration.toLatlon(this.liveVec)
-      this.targetVec = latlonToVec(lat, lon)
-      this.onLiveReading(lat, lon)
+      this.onStillReading(currentLat, currentLon)
+    } else {
+      this.onLiveReading(currentLat, currentLon)
     }
 
     // 4. 静止判断状态转换触发
     const isStill = !!up
     if (isStill && !this.lastStill) {
-      // 刚停稳
+      // 刚刚停稳
       if (this.data.currentMode === 'kids') {
         const { best } = this.matchKidsZone(this.targetVec)
         if (best) {
-          const cur = this.data.currentKidsZone
-          // 防抖迟滞：若依然属于同一区域则不重复打断音效
-          if (!cur || cur.id !== best.id) {
-            this.lockKidsZone(best, true)
-          }
+          this.lockKidsZone(best, true) // 停稳后播放高品质 edge-tts 故事语音！
         }
       } else {
         if (this.targetVec) {
@@ -461,11 +471,20 @@ Page({
         }
       }
     } else if (!isStill && this.targetVec) {
-      // 转动中
+      // 转动中实时响应：每 250ms 检查一次当前所在区域
       const now = Date.now()
-      if (now - this.lastPreviewTime > 300) {
+      if (now - this.lastPreviewTime > 250) {
         this.lastPreviewTime = now
-        if (this.data.currentMode === 'radio') {
+        if (this.data.currentMode === 'kids') {
+          // 转动跨越大区时，实时联动卡片与萌宠切换，防止界面停留在初始熊猫
+          const { best, candidates } = this.matchKidsZone(this.targetVec)
+          if (best && (!this.data.currentKidsZone || this.data.currentKidsZone.id !== best.id)) {
+            this.setData({
+              currentKidsZone: best,
+              kidsCandidates: candidates
+            })
+          }
+        } else if (this.data.currentMode === 'radio') {
           this.previewAt(this.targetVec)
         }
       }
@@ -483,7 +502,7 @@ Page({
       lon,
       statusText: '静止 · 已读数',
       statusClass: 'still',
-      sourceText: '数据来源：BWT901BLECL'
+      sourceText: this.calibration ? '数据来源：BWT901BLECL' : '未标定（默认方位，可去标定页校准）'
     }
 
     if (this.data.following) {
@@ -496,6 +515,13 @@ Page({
   },
 
   onLiveReading(lat, lon) {
+    // 功耗与CPU优化：节流控制，限制转动渲染频率最多 ~7Hz，杜绝频繁 setData 导致的发热耗电
+    const now = Date.now()
+    if (now - this.lastLiveSetDataTime < 140) {
+      return
+    }
+    this.lastLiveSetDataTime = now
+
     const coordText = fmtCoord(lat, lon)
     const update = {
       coordText,
@@ -503,7 +529,7 @@ Page({
       lon,
       statusText: '转动中',
       statusClass: 'moving',
-      sourceText: '数据来源：BWT901BLECL'
+      sourceText: this.calibration ? '数据来源：BWT901BLECL' : '未标定（默认方位，可去标定页校准）'
     }
 
     if (this.data.following) {

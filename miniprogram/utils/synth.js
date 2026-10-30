@@ -235,6 +235,44 @@ class SoundSynth {
   }
 
   /**
+   * 播放生态大区的超高品质 edge-tts 故事语音 (zh-CN-XiaoxiaoNeural)
+   * 真实人声绘本级播报，彻底告别单调假音！
+   * @param {string} zoneId - 例如 sichuan_panda, australia_kangaroo 等
+   */
+  playZoneAudio(zoneId) {
+    if (!zoneId) return
+
+    try {
+      if (wx.setInnerAudioOption) {
+        wx.setInnerAudioOption({ obeyMuteSwitch: false, mixWithOther: false })
+      }
+    } catch (e) {}
+
+    const audioPath = `/audio/kids/${zoneId}.mp3`
+    if (!this.player) {
+      try {
+        this.player = wx.createInnerAudioContext()
+        this.player.obeyMuteSwitch = false
+      } catch (e) {}
+    }
+
+    if (this.player) {
+      try {
+        this.player.stop()
+        this.player.src = audioPath
+        this.player.play()
+        console.log(`[SoundSynth] ✓ 正在播放 edge-tts 语音: ${audioPath}`)
+        return
+      } catch (err) {
+        console.warn('[SoundSynth] 播放 edge-tts MP3 异常，降级使用拟音:', err)
+      }
+    }
+
+    // 备用兜底
+    this.playByKey('cheer')
+  }
+
+  /**
    * 按动作标识播放对应音效
    * @param {string} key - cheer | boing | munch | gallop | bell | wave | roar
    */

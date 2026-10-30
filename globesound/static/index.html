@@ -240,10 +240,10 @@
   </div>
 </section>
 
-<!-- 底部卡片 2：萌宝乐园模式 -->
+  <!-- 底部卡片 2：萌宝乐园模式 -->
 <section class="card glass kids-card" id="kidsCard" hidden>
   <div class="kids-top-row">
-    <div class="kids-avatar-btn" id="kidsAvatar" title="点我听萌趣声">🐼</div>
+    <div class="kids-avatar-btn" id="kidsAvatar" title="点我听声音">🐼</div>
     <div class="kids-info-col">
       <div class="kids-badges">
         <span class="kids-tag" id="kidsTag">竹林小萌宠</span>
@@ -256,11 +256,11 @@
     <p id="kidsTalk">哇！找到大熊猫的家啦！圆滚滚的小熊猫正在吃竹子，咔嚓咔嚓真香呀~</p>
   </div>
   <div class="kids-actions">
-    <button class="kids-btn sfx" id="kidsSfxBtn">
-      <span>🔊</span><span id="kidsAction">咔嚓咔嚓~ 嗷呜！</span>
+    <button class="kids-btn sfx" id="kidsSfxBtn" style="background: linear-gradient(135deg, #48bb78, #38a169); color: #fff;">
+      <span>🗣️</span><span>听小萌友讲故事</span>
     </button>
-    <button class="kids-btn talk" id="kidsTalkBtn" title="朗读故事">
-      <span>🗣️ 讲给我听</span>
+    <button class="kids-btn talk" id="kidsTalkBtn" title="重播故事">
+      <span>🔊 再次重播</span>
     </button>
   </div>
   <div class="kids-cand-bar">
@@ -355,6 +355,51 @@ const pause = () => { follow = false; $("follow").hidden = false; };
 $("globe").addEventListener("pointerdown", pause);
 $("globe").addEventListener("wheel", pause, { passive: true });
 $("follow").onclick = () => { follow = true; $("follow").hidden = true; };
+
+// 鼠标/触控拖动 3D 地球仪时实时切卡和停稳读数
+function onUserRotateGlobe() {
+  const pov = world.pointOfView();
+  target = toVec(pov.lat, pov.lng);
+  $("coord").textContent = fmt(pov.lat, pov.lng);
+  setStatus("still", "已选点 · 停稳");
+  reticle.className = "reticle still";
+  addFix(pov.lat, pov.lng);
+  if (currentMode === "kids") {
+    const { best } = matchKidsZone(target);
+    if (best) lockKidsZone(best, true);
+  } else {
+    lockAt(target);
+  }
+}
+
+$("globe").addEventListener("pointerup", () => {
+  if (!follow) {
+    setTimeout(onUserRotateGlobe, 120);
+  }
+});
+
+let dragTimer = null;
+$("globe").addEventListener("pointermove", (e) => {
+  if (e.buttons === 1) { // 拖拽中
+    clearTimeout(dragTimer);
+    dragTimer = setTimeout(() => {
+      const pov = world.pointOfView();
+      const t = toVec(pov.lat, pov.lng);
+      $("coord").textContent = fmt(pov.lat, pov.lng);
+      setStatus("moving", "转动中");
+      reticle.className = "reticle";
+      if (currentMode === "kids") {
+        previewKidsAt(t);
+        const { best } = matchKidsZone(t);
+        if (best && (!curKidsZone || curKidsZone.id !== best.id)) {
+          lockKidsZone(best, false); // 转动中实时切卡，但不打断发声
+        }
+      } else {
+        previewAt(t);
+      }
+    }, 120);
+  }
+});
 
 let target = null, current = null;
 function frame() {
@@ -542,6 +587,17 @@ function matchKidsZone(v) {
   return { best: list[0], candidates: list.slice(0, 4) };
 }
 
+const kidsVoiceAudio = new Audio();
+function playZoneAudio(zoneId) {
+  if (!zoneId) return;
+  kidsVoiceAudio.pause();
+  kidsVoiceAudio.src = `/audio/kids/${zoneId}.mp3`;
+  kidsVoiceAudio.play().catch(e => {
+    console.warn("Audio play blocked, fallback to speech:", e);
+    if (curKidsZone) speakKidsStory(curKidsZone.talk);
+  });
+}
+
 function lockKidsZone(z, playSfx = true) {
   if (!z) return;
   curKidsZone = z;
@@ -569,21 +625,21 @@ function lockKidsZone(z, playSfx = true) {
   }]);
 
   if (playSfx) {
-    synth.playByKey(z.sfx || "cheer");
+    playZoneAudio(z.id);
   }
 }
 
 $("kidsAvatar").onclick = () => {
   if (!curKidsZone) return;
-  synth.playByKey(curKidsZone.sfx || "cheer");
+  playZoneAudio(curKidsZone.id);
 };
 $("kidsSfxBtn").onclick = () => {
   if (!curKidsZone) return;
-  synth.playByKey(curKidsZone.sfx || "cheer");
+  playZoneAudio(curKidsZone.id);
 };
 $("kidsTalkBtn").onclick = () => {
   if (!curKidsZone) return;
-  speakKidsStory(curKidsZone.talk);
+  playZoneAudio(curKidsZone.id);
 };
 $("kidsCandidates").onclick = e => {
   const btn = e.target.closest(".kids-cand-chip");
@@ -836,6 +892,10 @@ es.onmessage = e => {
     lastPreview = performance.now();
     if (currentMode === "kids") {
       previewKidsAt(target);
+      const { best } = matchKidsZone(target);
+      if (best && (!curKidsZone || curKidsZone.id !== best.id)) {
+        lockKidsZone(best, false); // 转动中实时响应跨区切换
+      }
     } else {
       previewAt(target);
     }

@@ -199,6 +199,11 @@ class BLEManager {
       this.parser.reset()
       this.connected = true
 
+      // 连接成功后，延迟 500ms 自动向传感器下发 10Hz 降频节能指令
+      setTimeout(() => {
+        this.configureRate(10)
+      }, 500)
+
       // 触发连接回调
       if (this.onConnectionChange) {
         this.onConnectionChange(true)
@@ -335,6 +340,15 @@ class BLEManager {
             properties: c.properties
           })))
 
+          // 寻找写特征值（FFE9），用于下发降频节能指令
+          const writeChar = chars.find(
+            c => c.uuid.toUpperCase().includes('FFE9') || (c.properties && (c.properties.write || c.properties.writeNoResponse))
+          )
+          if (writeChar) {
+            this.writeCharacteristicId = writeChar.uuid
+            console.log('[BLE] 发现可写配置特征值:', this.writeCharacteristicId)
+          }
+
           // 不区分大小写匹配 FFE4 通知特征值
           const target = NOTIFY_UUID.toUpperCase()
           const matched = chars.find(
@@ -355,6 +369,50 @@ class BLEManager {
           }
         },
         fail: reject
+      })
+    })
+  }
+
+  /**
+   * 配置维特传感器的输出回传频率，防止过高频率（如50Hz/100Hz）耗尽传感器电量及手机CPU
+   * @param {number} hz - 目标频率，推荐 5 或 10 Hz
+   */
+  configureRate(hz = 10) {
+    if (!this.deviceId || !this.serviceId || !this.writeCharacteristicId) {
+      return Promise.resolve(false)
+    }
+
+    // WitMotion 0x03 回传速率寄存器：0x05=5Hz, 0x06=10Hz, 0x07=20Hz, 0x08=50Hz
+    const rateMap = { 1: 0x03, 2: 0x04, 5: 0x05, 10: 0x06, 20: 0x07 }
+    const rateByte = rateMap[hz] || 0x06
+
+    // FF AA 03 <rate> 00
+    const cmd = new Uint8Array([0xFF, 0xAA, 0x03, rateByte, 0x00]).buffer
+
+    return new Promise((resolve) => {
+      wx.writeBLECharacteristicValue({
+        deviceId: this.deviceId,
+        serviceId: this.serviceId,
+        characteristicId: this.writeCharacteristicId,
+        value: cmd,
+        success: () => {
+          console.log(`[BLE] ✓ 已成功下发节能降频指令: ${hz}Hz`)
+          // 保存设置到传感器 Flash: FF AA 00 00 00
+          setTimeout(() => {
+            const saveCmd = new Uint8Array([0xFF, 0xAA, 0x00, 0x00, 0x00]).buffer
+            wx.writeBLECharacteristicValue({
+              deviceId: this.deviceId,
+              serviceId: this.serviceId,
+              characteristicId: this.writeCharacteristicId,
+              value: saveCmd,
+              complete: () => resolve(true)
+            })
+          }, 150)
+        },
+        fail: (err) => {
+          console.warn('[BLE] 下发节能降频指令失败（非严重错误，继续工作）:', err)
+          resolve(false)
+        }
       })
     })
   }

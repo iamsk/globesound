@@ -151,11 +151,11 @@
         <text class="kids-bubble-quote">”</text>
       </view>
 
-      <!-- 播放音效按钮 -->
+      <!-- 播放故事语音按钮 -->
       <view class="kids-btn-row">
         <button class="kids-play-btn" bindtap="onKidsPlaySound">
-          <text class="kids-play-icon">🔊</text>
-          <text>再听一次萌趣声</text>
+          <text class="kids-play-icon">🗣️</text>
+          <text>听小萌友讲故事</text>
         </button>
       </view>
 
