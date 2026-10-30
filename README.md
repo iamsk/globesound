@@ -56,6 +56,8 @@
 
 ## 姿态解算与标定原理
 
+![侧视图：重力解算与装配示意](docs/assembly.svg)
+
 ```mermaid
 flowchart LR
   A["BWT901BLECL<br/>球体内壁固定"] -- "BLE 蓝牙 5.0<br/>(自动降频至 10Hz)" --> B["手机小程序 / 电脑 Python"]
