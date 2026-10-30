@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>globesound 地球仪</title>
+<title>环宇寻声 globesound 地球仪</title>
 <style>
   :root {
     --bg: #05070d;
-    --panel: rgba(14, 18, 28, 0.8);
+    --panel: rgba(14, 18, 28, 0.85);
     --border: rgba(255, 255, 255, 0.09);
     --text: #e8ecf3;
     --muted: #8a93a6;
     --accent: #ffb547;
     --live: #4fd1c5;
     --play: #ff6b4a;
+    --kids: #48bb78;
     --off: #6b7280;
     --mono: ui-monospace, "SF Mono", Menlo, monospace;
     --serif: "Songti SC", "Noto Serif SC", Georgia, serif;
@@ -26,8 +27,28 @@
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
   button { font: inherit; color: var(--text); cursor: pointer; }
 
+  /* 顶部中间：模式切换器 */
+  .mode-bar {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px; padding: 4px; z-index: 20; border-radius: 999px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  .mode-btn {
+    background: transparent; border: 0; border-radius: 999px; padding: 6px 16px;
+    font-size: 13px; font-weight: 500; color: var(--muted); transition: all 0.2s ease;
+  }
+  .mode-btn:hover { color: var(--text); }
+  .mode-btn.on {
+    background: var(--accent); color: #05070d; font-weight: 600;
+    box-shadow: 0 2px 10px rgba(255, 181, 71, 0.4);
+  }
+  .mode-btn.kids.on {
+    background: linear-gradient(135deg, #48bb78, #38a169); color: #ffffff;
+    box-shadow: 0 2px 10px rgba(72, 187, 120, 0.45);
+  }
+
   /* 左上：读数 */
-  .hud { position: fixed; top: 16px; left: 16px; width: 280px; padding: 14px 16px; }
+  .hud { position: fixed; top: 16px; left: 16px; width: 280px; padding: 14px 16px; z-index: 10; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .brand { font-weight: 600; letter-spacing: .02em; }
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
@@ -47,16 +68,16 @@
 
   /* 右上：曲风 */
   .genres { position: fixed; top: 16px; right: 16px; max-width: 420px; display: flex; flex-wrap: wrap;
-    gap: 6px; justify-content: flex-end; }
+    gap: 6px; justify-content: flex-end; z-index: 10; }
   .chip { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 4px 11px;
     font-size: 12px; color: var(--muted); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
   .chip b { font-weight: 400; opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
   .chip.on { color: var(--bg); background: var(--accent); border-color: var(--accent); }
   .chip.on b { opacity: .7; }
 
-  /* 底部：电台卡片 */
+  /* 底部：卡片 */
   .card { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
-    width: min(460px, calc(100vw - 32px)); padding: 16px 18px; }
+    width: min(480px, calc(100vw - 32px)); padding: 16px 18px; z-index: 10; }
   .kicker { font: 11px/1 var(--mono); letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
   .kicker .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--off); margin-right: 6px; vertical-align: 1px; }
   .kicker.playing .dot { background: var(--play); box-shadow: 0 0 8px var(--play); }
@@ -74,6 +95,84 @@
     background: var(--play); font-weight: 600; }
   .start[hidden], .controls[hidden] { display: none; }
 
+  /* 萌宝乐园卡片专属样式 */
+  .kids-card {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .kids-card[hidden] { display: none; }
+  .kids-top-row {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+  }
+  .kids-avatar-btn {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.18);
+    display: grid; place-items: center; font-size: 38px; cursor: pointer; flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    user-select: none;
+  }
+  .kids-avatar-btn:hover { transform: scale(1.12) rotate(6deg); }
+  .kids-avatar-btn:active { transform: scale(0.94); }
+  .kids-info-col { flex: 1; min-width: 0; }
+  .kids-badges { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .kids-tag {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--kids); color: #05070d;
+  }
+  .kids-region { font-size: 12px; color: var(--muted); }
+  .kids-title {
+    font: 600 20px/1.2 var(--serif); color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .kids-bubble {
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px; padding: 10px 14px; font-size: 13px; line-height: 1.55;
+    color: #edf2f7; margin-bottom: 12px;
+  }
+  .kids-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+  .kids-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    border: 0; cursor: pointer; transition: transform 0.15s, opacity 0.15s;
+  }
+  .kids-btn:active { transform: scale(0.97); }
+  .kids-btn.sfx {
+    background: linear-gradient(135deg, #ffb547, #ff922b); color: #05070d;
+    box-shadow: 0 4px 14px rgba(255, 181, 71, 0.35);
+  }
+  .kids-btn.talk {
+    background: rgba(255, 255, 255, 0.1); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .kids-btn.talk:hover { background: rgba(255, 255, 255, 0.16); }
+  .kids-cand-bar {
+    display: flex; align-items: center; gap: 6px; overflow-x: auto;
+    scrollbar-width: none; font-size: 12px; padding-top: 4px;
+  }
+  .kids-cand-bar::-webkit-scrollbar { display: none; }
+  .kids-cand-label { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .kids-cand-chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+    border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border);
+    color: var(--text); font-size: 11px; white-space: nowrap; cursor: pointer; transition: all 0.15s;
+  }
+  .kids-cand-chip:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-1px); }
+
+  /* 3D地球上的萌友大图钉 */
+  .kids-pin {
+    transform: translate(-50%, -50%); display: flex; flex-direction: column;
+    align-items: center; cursor: pointer; pointer-events: auto; transition: transform 0.2s; user-select: none;
+  }
+  .kids-pin:hover { transform: translate(-50%, -50%) scale(1.25); }
+  .kids-pin span { font-size: 24px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); }
+  .kids-pin small {
+    font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,0.68);
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; padding: 1px 6px;
+    white-space: nowrap; backdrop-filter: blur(4px); margin-top: -2px;
+  }
+
   /* 准星 */
   .reticle { width: 34px; height: 34px; transform: translate(-50%, -50%); pointer-events: none; position: relative; }
   .reticle::before, .reticle::after { content: ""; position: absolute; inset: 0; border-radius: 50%; }
@@ -90,7 +189,8 @@
   .tag small { display: block; font: 10px/1.4 var(--mono); letter-spacing: .1em; color: var(--muted); }
 
   @media (max-width: 640px) {
-    .hud { width: auto; right: 16px; padding: 10px 14px; }
+    .mode-bar { top: 12px; }
+    .hud { width: auto; right: 16px; padding: 10px 14px; top: 52px; }
     .hud .label, .hud ol { display: none; }
     .coord { font-size: 20px; margin-top: 8px; }
     .genres { top: auto; bottom: 214px; left: 16px; right: 16px; max-width: none; flex-wrap: nowrap;
@@ -103,9 +203,15 @@
 <body>
 <div id="globe"></div>
 
+<!-- 模式切换条 -->
+<nav class="mode-bar glass" id="modeBar">
+  <button class="mode-btn on" id="modeRadio">📻 环球电台</button>
+  <button class="mode-btn kids" id="modeKids">🐼 萌宝乐园</button>
+</nav>
+
 <section class="hud glass">
   <div class="row">
-    <span class="brand">globesound</span>
+    <span class="brand">环宇寻声</span>
     <span class="pill" id="status"><i></i><span>等待数据</span></span>
   </div>
   <div class="coord" id="coord">—</div>
@@ -117,9 +223,11 @@
   <ol id="fixes"></ol>
 </section>
 
+<!-- 右上：曲风选择（电台模式专属） -->
 <nav class="genres" id="genres"></nav>
 
-<section class="card glass">
+<!-- 底部卡片 1：电台模式 -->
+<section class="card glass" id="radioCard">
   <div class="kicker" id="kicker"><span class="dot"></span><span id="kickerText">电台目录加载中</span></div>
   <div class="name" id="stName">把地球仪上的一个地方转到最高点</div>
   <div class="meta" id="stMeta">球停稳约 1 秒，就会锁定离读数点最近的电台</div>
@@ -132,16 +240,46 @@
   </div>
 </section>
 
+<!-- 底部卡片 2：萌宝乐园模式 -->
+<section class="card glass kids-card" id="kidsCard" hidden>
+  <div class="kids-top-row">
+    <div class="kids-avatar-btn" id="kidsAvatar" title="点我听萌趣声">🐼</div>
+    <div class="kids-info-col">
+      <div class="kids-badges">
+        <span class="kids-tag" id="kidsTag">竹林小萌宠</span>
+        <span class="kids-region" id="kidsRegion">中国·西南</span>
+      </div>
+      <div class="kids-title" id="kidsName">四川·大熊猫的家</div>
+    </div>
+  </div>
+  <div class="kids-bubble">
+    <p id="kidsTalk">哇！找到大熊猫的家啦！圆滚滚的小熊猫正在吃竹子，咔嚓咔嚓真香呀~</p>
+  </div>
+  <div class="kids-actions">
+    <button class="kids-btn sfx" id="kidsSfxBtn">
+      <span>🔊</span><span id="kidsAction">咔嚓咔嚓~ 嗷呜！</span>
+    </button>
+    <button class="kids-btn talk" id="kidsTalkBtn" title="朗读故事">
+      <span>🗣️ 讲给我听</span>
+    </button>
+  </div>
+  <div class="kids-cand-bar">
+    <span class="kids-cand-label">附近还有：</span>
+    <div id="kidsCandidates" style="display:flex; gap:6px;"></div>
+  </div>
+</section>
+
 <script src="https://unpkg.com/globe.gl@2.46.1/dist/globe.gl.min.js"></script>
 <script>
 const IMG = "https://unpkg.com/three-globe@2.45.6/example/img/";
-// 行政图配色：Natural Earth 的 MAPCOLOR7（1–7），相邻国家颜色不同
 const PALETTE = ["#f5d88a", "#f3b48a", "#eba7bb", "#f0a39a", "#c5b6e2", "#a9d7b4", "#efe3a2"];
-const LABEL_RANK = 3.5;  // Natural Earth 的 MIN_LABEL 不大于这个值的国家才写国名，免得挤成一团
-const ALT = innerWidth < innerHeight ? 3.4 : 2.2;  // 相机离球面的高度（以球半径计），竖屏拉远一点才放得下整个球
-const SMOOTH = 0.18;     // 每帧向目标靠近的比例，配合 10Hz 数据做插值
-const LOCK_DEG = 3;      // 读数点这么近的范围内没有电台，就不锁定（标定残差一般 1–3°）
-const CITY_KM = 30;      // 离最近电台这么近的都算"同城"，可以用 ◀ ▶ 切换
+const LABEL_RANK = 3.5;
+const ALT = innerWidth < innerHeight ? 3.4 : 2.2;
+const SMOOTH = 0.18;
+const LOCK_DEG = 3;
+const CITY_KM = 30;
+
+let currentMode = "radio"; // "radio" | "kids"
 
 const $ = id => document.getElementById(id);
 const fmt = (lat, lon) =>
@@ -161,7 +299,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const reticle = document.createElement("div");
 reticle.className = "reticle";
 reticle.innerHTML = '<div class="tag"></div>';
-const tag = reticle.firstChild;  // 准星要等 globe.gl 挂进 DOM 才查得到，所以直接持有引用
+const tag = reticle.firstChild;
 const marker = { lat: 0, lng: 0 };
 
 const world = new Globe($("globe"), { animateIn: false })
@@ -185,18 +323,18 @@ const world = new Globe($("globe"), { animateIn: false })
   .pointsTransitionDuration(0)
   .ringLat("lat").ringLng("lon")
   .ringAltitude(0.009)
-  .ringColor(() => t => `rgba(255,107,74,${1 - t})`)
+  .ringColor(d => t => d.ringColor ? d.ringColor(t) : `rgba(255,107,74,${1 - t})`)
   .ringMaxRadius(4)
   .ringPropagationSpeed(3)
   .ringRepeatPeriod(1100);
+
 world.pointOfView({ lat: 20, lng: 100, altitude: ALT });
-// 海洋：浅蓝、几乎不反光，像印刷的地球仪
 Object.assign(world.globeMaterial(), { shininess: 2 });
 world.globeMaterial().color.set("#a6d3f0");
 world.globeMaterial().emissive.set("#3b6f8f");
 world.globeMaterial().emissiveIntensity = 0.35;
 
-// 国界和国名。globe.gl 自带的文字图层不支持中文，国名用 HTML 元素，转到背面时自己藏起来
+// 国界和国名
 let labels = [];
 fetch("/countries.json").then(r => r.json()).then(d => {
   world.polygonsData(d.features);
@@ -207,12 +345,11 @@ fetch("/countries.json").then(r => r.json()).then(d => {
     const [lng, lat] = f.properties.label;
     return { lat, lng, el, v: toVec(lat, lng) };
   });
-  world.htmlElementsData([...labels, marker]);
+  updateHtmlElements();
 });
-// globe.gl 只在初始化时取一次窗口尺寸；页面在后台打开或手机转屏时要自己跟上
+
 new ResizeObserver(() => world.width($("globe").clientWidth).height($("globe").clientHeight)).observe($("globe"));
 
-// 用户拖动或缩放就暂停跟随
 let follow = true;
 const pause = () => { follow = false; $("follow").hidden = false; };
 $("globe").addEventListener("pointerdown", pause);
@@ -225,16 +362,274 @@ function frame() {
     current = current ? current.map((c, i) => c + SMOOTH * (target[i] - c)) : target.slice();
     const [lat, lng] = toLatLon(current);
     marker.lat = lat; marker.lng = lng;
-    world.htmlElementsData([...labels, marker]);
+    updateHtmlElements();
     if (follow) world.pointOfView({ lat, lng, altitude: world.pointOfView().altitude || ALT }, 0);
   }
   if (labels.length) {
     const pov = world.pointOfView(), cv = toVec(pov.lat, pov.lng);
-    for (const l of labels) l.el.style.opacity = dot(l.v, cv) > 0.5 ? "" : "0";  // 离画面中心约 60° 以外的不写，边缘太挤
+    for (const l of labels) l.el.style.opacity = dot(l.v, cv) > 0.5 ? "" : "0";
+  }
+  if (kidsLabels.length) {
+    const pov = world.pointOfView(), cv = toVec(pov.lat, pov.lng);
+    for (const k of kidsLabels) {
+      k.el.style.display = currentMode === "kids" && dot(k.v, cv) > 0.4 ? "flex" : "none";
+    }
   }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+function updateHtmlElements() {
+  const currentKids = currentMode === "kids" ? kidsLabels : [];
+  world.htmlElementsData([...labels, ...currentKids, marker]);
+}
+
+// ---------- Web Audio 音效发生器 ----------
+class WebSynth {
+  constructor() {
+    this.ctx = null;
+  }
+  _init() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
+    return this.ctx;
+  }
+  playByKey(key) {
+    const ctx = this._init();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    try {
+      if (key === "boing") {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(720, now + 0.2);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.38);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(now); osc.stop(now + 0.4);
+      } else if (key === "munch") {
+        [0, 0.12, 0.24].forEach((tOff, idx) => {
+          const osc = ctx.createOscillator(), gain = ctx.createGain();
+          const t = now + tOff;
+          osc.type = "square";
+          osc.frequency.setValueAtTime(460 - idx * 60, t);
+          osc.frequency.exponentialRampToValueAtTime(140, t + 0.08);
+          gain.gain.setValueAtTime(0.2, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.09);
+        });
+      } else if (key === "gallop") {
+        [0, 0.13, 0.26, 0.39].forEach((tOff, idx) => {
+          const osc = ctx.createOscillator(), gain = ctx.createGain();
+          const t = now + tOff;
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(idx % 2 === 0 ? 580 : 420, t);
+          gain.gain.setValueAtTime(0.25, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.07);
+        });
+      } else if (key === "bell") {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, now);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(now); osc.stop(now + 0.8);
+      } else if (key === "wave") {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.linearRampToValueAtTime(280, now + 0.35);
+        osc.frequency.linearRampToValueAtTime(130, now + 0.7);
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.35);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(now); osc.stop(now + 0.75);
+      } else { // cheer / roar
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = ctx.createOscillator(), gain = ctx.createGain();
+          const t = now + idx * 0.11;
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.01, t);
+          gain.gain.linearRampToValueAtTime(0.25, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.32);
+        });
+      }
+    } catch (e) {
+      console.warn("WebSynth 播放异常:", e);
+    }
+  }
+}
+const synth = new WebSynth();
+
+function speakKidsStory(text) {
+  if ("speechSynthesis" in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "zh-CN";
+      u.rate = 0.92;
+      u.pitch = 1.15;
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      console.warn("SpeechSynthesis 朗读异常:", e);
+    }
+  }
+}
+
+// ---------- 萌宝乐园数据与逻辑 ----------
+let kidsZones = [], kidsLabels = [], curKidsZone = null;
+
+async function loadKidsZones() {
+  try {
+    const r = await fetch("/kids_zones.json");
+    if (!r.ok) throw new Error("fetch failed");
+    kidsZones = await r.json();
+  } catch (e) {
+    console.warn("加载远程 kids_zones.json 异常，使用内置核心数据兜底:", e);
+    kidsZones = [
+      { id: "sichuan_panda", name: "四川·大熊猫的家", region: "中国·西南", emoji: "🐼", animal: "大熊猫", lat: 30.57, lon: 104.06, sfx: "munch", tag: "竹林小萌宠", action: "咔嚓咔嚓~ 嗷呜！", talk: "哇！找到大熊猫的家啦！圆滚滚的小熊猫正在吃竹子，咔嚓咔嚓真香呀~", badgeColor: "#48bb78" },
+      { id: "xinjiang_sheep", name: "新疆·甜葡萄与小绵羊", region: "中国·西北", emoji: "🐑", animal: "小绵羊", lat: 43.82, lon: 87.62, sfx: "cheer", tag: "丝路绿洲", action: "咩咩~ 葡萄甜滋滋！", talk: "咩咩~ 这里的葡萄圆溜溜、哈密瓜甜滋滋，小白羊在绿草地上跳舞啦！", badgeColor: "#9f7aea" },
+      { id: "inner_mongolia_horse", name: "内蒙古·大草原的小骏马", region: "中国·北疆", emoji: "🐎", animal: "小骏马", lat: 42.0, lon: 112.0, sfx: "gallop", tag: "辽阔草原", action: "嗒嗒嗒！快跑快跑~", talk: "嗒嗒嗒！小马在大草原上快跑快跑，跑得像风一样快，呼呼呼！", badgeColor: "#ed8936" },
+      { id: "africa_lion", name: "非洲大草原·狮子王", region: "非洲·东部", emoji: "🦁", animal: "狮子王", lat: -2.33, lon: 34.83, sfx: "roar", tag: "万兽之王", action: "嗷呜——！我是大狮子！", talk: "哇！快看大狮子金灿灿的鬃毛！在辽阔的非洲大草原上，斑马羚羊一起跑步呢！", badgeColor: "#f6ad55" },
+      { id: "australia_koala", name: "澳大利亚·考拉与袋鼠", region: "大洋洲", emoji: "🐨", animal: "考拉与袋鼠", lat: -25.27, lon: 133.77, sfx: "boing", tag: "跳跳乐园", action: "蹦跶蹦跶~ 呼噜呼噜！", talk: "小袋鼠肚子里有个神奇大口袋，小考拉正抱着桉树呼呼大睡呢！", badgeColor: "#4fd1c5" },
+      { id: "antarctica_penguin", name: "南极冰川·帝企鹅", region: "极地·南极", emoji: "🐧", animal: "小企鹅", lat: -82.86, lon: 135.0, sfx: "cheer", tag: "冰雪小绅士", action: "摇摇摆摆，滑滑梯！", talk: "好大好大的冰川呀！圆肚皮的小企鹅排好队，排排队摇摇晃晃去海里抓小鱼啦！", badgeColor: "#63b3ed" },
+      { id: "pacific_whale", name: "太平洋·深海蓝鲸", region: "大洋", emoji: "🐋", animal: "蓝鲸", lat: 0.0, lon: -160.0, sfx: "wave", tag: "海洋霸主", action: "哗啦—— 喷大喷泉！", talk: "大蓝鲸在深深的大海里唱歌，头顶呼哧呼哧喷出了超级大水柱，真壮观！", badgeColor: "#4299e1" }
+    ];
+  }
+
+  kidsZones.forEach(z => {
+    z.v = toVec(z.lat, z.lon);
+  });
+
+  kidsLabels = kidsZones.map(z => {
+    const el = document.createElement("div");
+    el.className = "kids-pin";
+    el.innerHTML = `<span>${z.emoji}</span><small>${z.animal}</small>`;
+    el.onclick = e => {
+      e.stopPropagation();
+      target = z.v;
+      lockKidsZone(z, true);
+    };
+    return { lat: z.lat, lng: z.lon, el, v: z.v, zone: z };
+  });
+
+  updateHtmlElements();
+}
+
+function matchKidsZone(v) {
+  if (!v || !kidsZones.length) return { best: null, candidates: [] };
+  const list = kidsZones.map(z => {
+    const d = dot(z.v, v);
+    const deg = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
+    return { ...z, distDeg: deg };
+  });
+  list.sort((a, b) => a.distDeg - b.distDeg);
+  return { best: list[0], candidates: list.slice(0, 4) };
+}
+
+function lockKidsZone(z, playSfx = true) {
+  if (!z) return;
+  curKidsZone = z;
+  $("kidsEmoji").textContent = z.emoji;
+  $("kidsTag").textContent = z.tag || "地球萌友";
+  $("kidsTag").style.background = z.badgeColor || "var(--kids)";
+  $("kidsRegion").textContent = z.region || "广袤世界";
+  $("kidsName").textContent = z.name;
+  $("kidsTalk").textContent = z.talk;
+  $("kidsAction").textContent = z.action || "嗷呜~";
+
+  tag.innerHTML = `<small>萌宝乐园 · ${esc(z.region)}</small>${z.emoji} ${esc(z.name)}`;
+
+  // 附近萌友候选
+  const { candidates } = matchKidsZone(z.v);
+  $("kidsCandidates").innerHTML = candidates.map(c =>
+    `<button class="kids-cand-chip" data-id="${c.id}">${c.emoji} ${esc(c.animal)}</button>`
+  ).join("");
+
+  // 3D 地球波纹高亮
+  world.ringsData([{
+    lat: z.lat,
+    lon: z.lon,
+    ringColor: t => `rgba(72,187,120,${1 - t})`
+  }]);
+
+  if (playSfx) {
+    synth.playByKey(z.sfx || "cheer");
+  }
+}
+
+$("kidsAvatar").onclick = () => {
+  if (!curKidsZone) return;
+  synth.playByKey(curKidsZone.sfx || "cheer");
+};
+$("kidsSfxBtn").onclick = () => {
+  if (!curKidsZone) return;
+  synth.playByKey(curKidsZone.sfx || "cheer");
+};
+$("kidsTalkBtn").onclick = () => {
+  if (!curKidsZone) return;
+  speakKidsStory(curKidsZone.talk);
+};
+$("kidsCandidates").onclick = e => {
+  const btn = e.target.closest(".kids-cand-chip");
+  if (!btn) return;
+  const targetId = btn.dataset.id;
+  const z = kidsZones.find(item => item.id === targetId);
+  if (z) {
+    target = z.v;
+    lockKidsZone(z, true);
+  }
+};
+
+function switchMode(mode) {
+  if (mode === currentMode) return;
+  currentMode = mode;
+
+  if (mode === "kids") {
+    audio.pause();
+    $("modeKids").className = "mode-btn kids on";
+    $("modeRadio").className = "mode-btn";
+    $("genres").style.display = "none";
+    $("radioCard").hidden = true;
+    $("kidsCard").hidden = false;
+    world.pointsData([]);
+    updateHtmlElements();
+
+    const v = target || toVec(20, 100);
+    const { best } = matchKidsZone(v);
+    if (best) lockKidsZone(best, true);
+  } else {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    $("modeRadio").className = "mode-btn on";
+    $("modeKids").className = "mode-btn kids";
+    $("genres").style.display = "flex";
+    $("radioCard").hidden = false;
+    $("kidsCard").hidden = true;
+    world.pointsData(visible);
+    updateHtmlElements();
+
+    if (target) lockAt(target);
+    else renderCard();
+  }
+}
+
+$("modeRadio").onclick = () => switchMode("radio");
+$("modeKids").onclick = () => switchMode("kids");
 
 // ---------- 电台目录 ----------
 let stations = [], visible = [], genre = "全部";
@@ -252,7 +647,7 @@ async function loadStations() {
     renderGenres();
     applyFilter();
     setKicker("", `${stations.length.toLocaleString()} 个电台`);
-    if (lastStill) lockAt(target);  // 打开网页时球本来就停着，不用等它再动一次
+    if (lastStill && currentMode === "radio") lockAt(target);
   } catch (e) {
     setKicker("", "电台目录加载失败，5 秒后重试");
     setTimeout(loadStations, 5000);
@@ -272,15 +667,14 @@ $("genres").onclick = e => {
   genre = b.dataset.g;
   renderGenres();
   applyFilter();
-  if (lastStill) lockAt(target);  // 换了曲风，就在当前位置重新挑
+  if (lastStill && currentMode === "radio") lockAt(target);
 };
 
 function applyFilter() {
   visible = genre === "全部" ? stations : stations.filter(s => s.genre === genre);
-  world.pointsData(visible);
+  if (currentMode === "radio") world.pointsData(visible);
 }
 
-// 离读数点最近的电台，以及和它"同城"的那一组（按点击量排序）
 function groupAt(v) {
   let best = null, bd = -2;
   for (const s of visible) { const d = dot(s.v, v); if (d > bd) { bd = d; best = s; } }
@@ -292,7 +686,7 @@ function groupAt(v) {
 // ---------- 播放 ----------
 const audio = new Audio();
 audio.preload = "none";
-let unlocked = false;   // 浏览器要求先有一次用户点击，才允许出声
+let unlocked = false;
 let group = [], idx = 0, cur = null;
 
 function setKicker(cls, text) {
@@ -314,7 +708,9 @@ function renderCard() {
   $("prev").disabled = $("next").disabled = group.length < 2;
   $("count").textContent = group.length > 1 ? `同城 ${idx + 1} / ${group.length}` : group.length ? "附近只有这一个" : "";
   $("toggle").textContent = audio.paused ? "▶" : "❚❚";
-  world.ringsData(cur ? [cur] : []);
+  if (currentMode === "radio") {
+    world.ringsData(cur ? [cur] : []);
+  }
 }
 
 function play(i) {
@@ -324,8 +720,7 @@ function play(i) {
   if (unlocked) {
     setKicker("locked", "连接中……");
     audio.src = cur.url;
-    audio.play().catch(() => {});  // 失败交给 onerror 处理
-    // 有的流既不报错也不出声，一直挂着；超时就当连不上
+    audio.play().catch(() => {});
     const st = cur;
     clearTimeout(connectTimer);
     connectTimer = setTimeout(() => { if (cur === st && audio.readyState < 3) audio.onerror(); }, CONNECT_MS);
@@ -354,19 +749,29 @@ audio.onerror = () => {
 
 $("start").onclick = () => {
   unlocked = true;
+  synth._init();
   if (cur) play(idx); else renderCard();
 };
 $("toggle").onclick = () => { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); };
 $("prev").onclick = () => { failStreak = 0; play(idx - 1); };
 $("next").onclick = () => { failStreak = 0; play(idx + 1); };
 addEventListener("keydown", e => {
+  if (currentMode === "kids") {
+    if (e.key === " " && curKidsZone) {
+      e.preventDefault();
+      synth.playByKey(curKidsZone.sfx || "cheer");
+    } else if ((e.key === "Enter" || e.key === "t" || e.key === "T") && curKidsZone) {
+      e.preventDefault();
+      speakKidsStory(curKidsZone.talk);
+    }
+    return;
+  }
   if (!cur || !unlocked) return;
   if (e.key === "ArrowLeft") $("prev").click();
   else if (e.key === "ArrowRight") $("next").click();
   else if (e.key === " ") { e.preventDefault(); $("toggle").click(); }
 });
 
-// 球静止 → 锁定读数点附近的电台。已经在播的电台还在这一组里，就不打断
 function lockAt(v) {
   if (!v || !visible.length) return;
   const g = groupAt(v);
@@ -380,11 +785,17 @@ function lockAt(v) {
   play(0);
 }
 
-// 转动中只预览，不切台，免得一路转过去一路乱跳
 function previewAt(v) {
   if (!visible.length) return;
   const g = groupAt(v);
   tag.innerHTML = g.length ? `<small>预览 · ${esc(g[0].genre)}</small>${esc(g[0].name)}` : "";
+}
+
+function previewKidsAt(v) {
+  const { best } = matchKidsZone(v);
+  if (best) {
+    tag.innerHTML = `<small>探索中 · ${esc(best.region)}</small>${best.emoji} ${esc(best.animal)}`;
+  }
 }
 
 // ---------- 读数 ----------
@@ -412,14 +823,33 @@ es.onmessage = e => {
   $("source").textContent = s.source === "sim" ? "数据来源：模拟器" : "数据来源：BWT901BLECL";
   setStatus(s.still ? "still" : "moving", s.still ? "静止 · 已读数" : "转动中");
   reticle.className = "reticle" + (s.still ? " still" : "");
-  if (s.still && !lastStill) { addFix(s.lat, s.lon); lockAt(target); }
-  if (!s.still && performance.now() - lastPreview > 250) { lastPreview = performance.now(); previewAt(target); }
+  if (s.still && !lastStill) {
+    addFix(s.lat, s.lon);
+    if (currentMode === "kids") {
+      const { best } = matchKidsZone(target);
+      if (best) lockKidsZone(best, true);
+    } else {
+      lockAt(target);
+    }
+  }
+  if (!s.still && performance.now() - lastPreview > 250) {
+    lastPreview = performance.now();
+    if (currentMode === "kids") {
+      previewKidsAt(target);
+    } else {
+      previewAt(target);
+    }
+  }
   lastStill = s.still;
   clearTimeout(staleTimer);
   staleTimer = setTimeout(() => setStatus("", "没有新数据"), 1500);
 };
-es.onerror = () => { setStatus("", "连接断开，重连中"); $("source").textContent = "确认 python -m globesound --web 还在运行"; };
+es.onerror = () => {
+  setStatus("", "连接断开，重连中");
+  $("source").textContent = "确认 python -m globesound --web 还在运行";
+};
 
+loadKidsZones();
 loadStations();
 </script>
 </body>

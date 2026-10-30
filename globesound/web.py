@@ -17,6 +17,7 @@ STATIC_FILES = {
     "/": ("index.html", "text/html"),
     "/index.html": ("index.html", "text/html"),
     "/countries.json": ("countries.json", "application/json"),
+    "/kids_zones.json": ("kids_zones.json", "application/json"),
 }
 
 

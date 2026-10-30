@@ -17,6 +17,18 @@ App({
    * 小程序启动时，从本地存储恢复校准数据并创建全局 BLE 管理器
    */
   onLaunch() {
+    // 解除 iOS 静音开关静音，允许媒体在任何模式下发声
+    try {
+      if (wx.setInnerAudioOption) {
+        wx.setInnerAudioOption({
+          obeyMuteSwitch: false,
+          mixWithOther: true
+        })
+      }
+    } catch (e) {
+      console.warn('[App] 设置音频选项异常:', e)
+    }
+
     this.globalData.ble = new BLEManager()
 
     try {

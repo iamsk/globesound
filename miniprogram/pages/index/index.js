@@ -4,8 +4,10 @@
  * 功能：
  * 1. 通过 BLE 连接 BWT901BLECL IMU 传感器
  * 2. 实时解析传感器数据包，静止时计算球顶读数点经纬度
- * 3. 卫星/标准地图展示读数位置及同城电台
- * 4. 自动锁定并播放离读数点最近的电台，支持同城电台切换及曲风筛选
+ * 3. 卫星/标准地图展示读数位置
+ * 4. 双模式支持：
+ *    - 📻 环球电台：自动锁定播放离读数点最近的电台，支持同城电台切换及曲风筛选
+ *    - 🐼 萌宝环球乐园：专为幼儿设计，超高容错（按大洲、大洋与大省区磁吸），萌趣音效与短对话
  */
 
 const app = getApp()
@@ -18,9 +20,10 @@ const {
   norm,
   angleDeg
 } = require('../../utils/geo')
+const synth = require('../../utils/synth')
 
 // ===== 常量 =====
-const LOCK_DEG = 3.0          // 读数点 3° 范围内没有电台则不锁定
+const LOCK_DEG = 3.0          // 电台读数点 3° 范围内没有电台则不锁定
 const CITY_KM = 30.0          // 距离最近电台 30km 内归为"同城"
 const LIVE_SMOOTH = 0.3       // 实时方向一阶低通滤波系数
 const MAX_FIXES = 4           // 最近读数记录条数
@@ -46,6 +49,9 @@ function fmtTime(d = new Date()) {
 
 Page({
   data: {
+    // 模式切换：'radio' (环球电台) 或 'kids' (萌宝乐园)
+    currentMode: 'kids',
+
     // 连接状态
     bleConnected: false,
     bleConnecting: false,
@@ -55,18 +61,22 @@ Page({
     // 坐标展示
     coordText: '—',
     sourceText: '连接蓝牙传感器开始使用',
-    lat: 22.5,
-    lon: 114.0,
+    lat: 30.57,
+    lon: 104.06,
 
     // 地图设置
-    mapLat: 22.54,
-    mapLon: 114.06,
+    mapLat: 30.57,
+    mapLon: 104.06,
     scale: 4,
     allMarkers: [],
     following: true,
     satelliteOn: true,
 
-    // 电台相关
+    // ===== 萌宝乐园数据 =====
+    currentKidsZone: null,
+    kidsCandidates: [],
+
+    // ===== 电台模式数据 =====
     stations: [],
     visibleStations: [],
     currentStation: null,
@@ -100,8 +110,11 @@ Page({
     this.connectTimer = null
     this.failStreak = 0
 
-    // 初始化音频
+    // 初始化音频与合成器
     this._initAudio()
+
+    // 加载萌宝乐园数据
+    this.loadKidsZones()
 
     // 加载电台数据
     this.loadStations()
@@ -130,6 +143,135 @@ Page({
       this.ble.removeConnectionListener(this._onConnBound)
     }
     this._destroyAudio()
+  },
+
+  // ===== 模式切换 =====
+  onSwitchMode(e) {
+    const mode = e.currentTarget.dataset.mode
+    if (mode === this.data.currentMode) return
+
+    this.setData({ currentMode: mode })
+
+    if (mode === 'kids') {
+      // 切换到萌宝模式：暂停电台
+      if (this.audio) {
+        this.audio.pause()
+      }
+      this.setData({ isPlaying: false })
+
+      // 立即对准当前位置的萌宝
+      const v = this.targetVec || latlonToVec(this.data.lat, this.data.lon)
+      const { best } = this.matchKidsZone(v)
+      if (best) {
+        this.lockKidsZone(best, true)
+      }
+    } else {
+      // 切换到电台模式
+      if (this.targetVec) {
+        this.lockAt(this.targetVec)
+      } else {
+        this.setData({
+          allMarkers: this.buildMarkers(this.data.lat, this.data.lon, this.data.statusClass)
+        })
+      }
+    }
+  },
+
+  // ===== 萌宝乐园核心逻辑 =====
+
+  loadKidsZones() {
+    try {
+      const kidsList = require('../../data/kids_zones.json')
+      this.kidsZones = kidsList.map(z => ({
+        ...z,
+        v: latlonToVec(z.lat, z.lon)
+      }))
+
+      // 默认选中第一只萌友 (大熊猫)
+      const defaultZone = this.kidsZones[0]
+      this.setData({
+        currentKidsZone: defaultZone,
+        kidsCandidates: this.kidsZones.slice(0, 4),
+        allMarkers: this.buildMarkers(defaultZone.lat, defaultZone.lon, 'still')
+      })
+    } catch (e) {
+      console.warn('加载萌宝数据失败:', e)
+    }
+  },
+
+  /**
+   * 超高容错的萌宝区域磁吸算法
+   * 计算与全球各动物大区的球面角距离，按最近邻自动吸附，并提取前4个最近萌友作为候选
+   */
+  matchKidsZone(v) {
+    if (!v || !this.kidsZones || this.kidsZones.length === 0) {
+      return { best: null, candidates: [] }
+    }
+
+    const list = this.kidsZones.map(z => {
+      const d = dot(z.v, v)
+      const deg = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI
+      return {
+        ...z,
+        distDeg: deg
+      }
+    })
+
+    list.sort((a, b) => a.distDeg - b.distDeg)
+
+    const best = list[0]
+    const candidates = list.slice(0, 4)
+
+    return { best, candidates }
+  },
+
+  lockKidsZone(zone, playSound = true) {
+    if (!zone) return
+
+    const v = latlonToVec(zone.lat, zone.lon)
+    const { candidates } = this.matchKidsZone(this.targetVec || v)
+
+    this.setData({
+      currentKidsZone: zone,
+      kidsCandidates: candidates,
+      allMarkers: this.buildMarkers(this.data.lat, this.data.lon, this.data.statusClass)
+    })
+
+    if (playSound) {
+      synth.playByKey(zone.sfx || 'cheer')
+      try {
+        wx.vibrateShort({ type: 'medium' })
+      } catch (e) {
+        // ignore
+      }
+    }
+  },
+
+  onKidsPlaySound() {
+    const cur = this.data.currentKidsZone
+    if (!cur) return
+
+    synth.playByKey(cur.sfx || 'cheer')
+    try {
+      wx.vibrateShort({ type: 'medium' })
+    } catch (e) {
+      // ignore
+    }
+
+    wx.showToast({
+      title: cur.action || '嗷呜~',
+      icon: 'none',
+      duration: 1500
+    })
+  },
+
+  onSelectKidsCandidate(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id || !this.kidsZones) return
+    const target = this.kidsZones.find(z => z.id === id)
+    if (target) {
+      this.lockKidsZone(target, true)
+    }
   },
 
   // ===== BLE 管理与数据接入 =====
@@ -226,7 +368,6 @@ Page({
         sourceText: '数据来源：' + (selectedDevice.name || 'BWT901BLECL')
       })
 
-      // 如果尚未标定，引导去标定页
       if (!this.calibration) {
         wx.showModal({
           title: '首次使用请先标定',
@@ -273,7 +414,7 @@ Page({
     // 1. 静止检测
     const up = this.detector.update(pkt.acc, pkt.gyro)
 
-    // 2. 实时加速度滤波（用于转动中平滑跟随）
+    // 2. 实时加速度滤波
     const n = norm(pkt.acc)
     if (n > 0.7 && n < 1.3) {
       const v = [pkt.acc[0] / n, pkt.acc[1] / n, pkt.acc[2] / n]
@@ -290,7 +431,7 @@ Page({
 
     if (!this.calibration) return
 
-    // 3. 计算坐标
+    // 3. 计算读数点经纬度
     if (up) {
       const { lat, lon } = this.calibration.toLatlon(up)
       this.targetVec = latlonToVec(lat, lon)
@@ -304,16 +445,29 @@ Page({
     // 4. 静止判断状态转换触发
     const isStill = !!up
     if (isStill && !this.lastStill) {
-      // 刚停稳：锁定电台
-      if (this.targetVec) {
-        this.lockAt(this.targetVec)
+      // 刚停稳
+      if (this.data.currentMode === 'kids') {
+        const { best } = this.matchKidsZone(this.targetVec)
+        if (best) {
+          const cur = this.data.currentKidsZone
+          // 防抖迟滞：若依然属于同一区域则不重复打断音效
+          if (!cur || cur.id !== best.id) {
+            this.lockKidsZone(best, true)
+          }
+        }
+      } else {
+        if (this.targetVec) {
+          this.lockAt(this.targetVec)
+        }
       }
     } else if (!isStill && this.targetVec) {
-      // 转动中：节流做电台预览提示
+      // 转动中
       const now = Date.now()
       if (now - this.lastPreviewTime > 300) {
         this.lastPreviewTime = now
-        this.previewAt(this.targetVec)
+        if (this.data.currentMode === 'radio') {
+          this.previewAt(this.targetVec)
+        }
       }
     }
     this.lastStill = isStill
@@ -378,63 +532,95 @@ Page({
 
   buildMarkers(lat, lon, state) {
     const isStill = state === 'still'
+    const isKids = this.data.currentMode === 'kids'
+    const curZone = this.data.currentKidsZone
+
+    const calloutText = isKids && curZone
+      ? `${curZone.emoji} ${curZone.animal}`
+      : fmtCoord(lat, lon)
+
+    const borderColor = isKids
+      ? (curZone ? curZone.badgeColor || '#48bb78' : '#48bb78')
+      : (isStill ? '#ffb547' : '#4fd1c5')
+
     const markers = [
       {
         id: 1,
         latitude: lat,
         longitude: lon,
-        width: 24,
-        height: 24,
+        width: 26,
+        height: 26,
         iconPath: isStill ? '/images/marker-amber.png' : '/images/marker-cyan.png',
         anchor: { x: 0.5, y: 0.5 },
         callout: {
-          content: fmtCoord(lat, lon),
-          color: '#e8ecf3',
+          content: calloutText,
+          color: '#ffffff',
           bgColor: '#0e121c',
           borderRadius: 8,
-          borderColor: isStill ? '#ffb547' : '#4fd1c5',
-          borderWidth: 1,
+          borderColor: borderColor,
+          borderWidth: 2,
           padding: 6,
-          fontSize: 12,
+          fontSize: isKids ? 13 : 12,
           display: 'ALWAYS'
         }
       }
     ]
 
-    // 如果当前有选中的电台，在地图上标出
-    const cur = this.data.currentStation
-    if (cur && cur.lat != null && cur.lon != null) {
+    if (isKids && curZone) {
       markers.push({
         id: 2,
-        latitude: cur.lat,
-        longitude: cur.lon,
-        width: 20,
-        height: 20,
+        latitude: curZone.lat,
+        longitude: curZone.lon,
+        width: 22,
+        height: 22,
         iconPath: '/images/marker-play.png',
         anchor: { x: 0.5, y: 0.5 },
         callout: {
-          content: cur.name,
-          color: '#ff6b4a',
-          bgColor: '#0e121c',
+          content: `${curZone.emoji} ${curZone.name}`,
+          color: '#ffffff',
+          bgColor: '#1a202c',
           borderRadius: 6,
-          borderColor: '#ff6b4a',
+          borderColor: curZone.badgeColor || '#ffb547',
           borderWidth: 1,
           padding: 4,
           fontSize: 11,
           display: 'BYCLICK'
         }
       })
+    } else if (!isKids) {
+      const cur = this.data.currentStation
+      if (cur && cur.lat != null && cur.lon != null) {
+        markers.push({
+          id: 2,
+          latitude: cur.lat,
+          longitude: cur.lon,
+          width: 20,
+          height: 20,
+          iconPath: '/images/marker-play.png',
+          anchor: { x: 0.5, y: 0.5 },
+          callout: {
+            content: cur.name,
+            color: '#ff6b4a',
+            bgColor: '#0e121c',
+            borderRadius: 6,
+            borderColor: '#ff6b4a',
+            borderWidth: 1,
+            padding: 4,
+            fontSize: 11,
+            display: 'BYCLICK'
+          }
+        })
+      }
     }
 
     return markers
   },
 
-  // ===== 电台加载与筛选 =====
+  // ===== 电台模式逻辑 =====
 
   loadStations() {
     let list = []
     try {
-      // 优先加载全量精选电台库（包含中国所有省市与世界名城 1600+ 电台）
       list = require('../../data/stations.json')
     } catch (e) {
       try {
@@ -455,7 +641,6 @@ Page({
       kickerText: `${this.allStations.length} 个电台已就绪`
     })
 
-    // 尝试拉取线上更新（不阻塞离线使用）
     this.fetchOnlineStations()
   },
 
@@ -487,7 +672,6 @@ Page({
               }
             })
 
-          // 合并到本地（本地优先）
           const existingUrls = new Set(this.allStations.map(s => s.url))
           const additions = online.filter(s => !existingUrls.has(s.url))
           this.allStations = [...this.allStations, ...additions]
@@ -495,12 +679,12 @@ Page({
           this.renderGenres()
           this.applyGenreFilter()
           this.setData({
-            kickerText: `${this.allStations.length} 个电台已加载`
+            kickerText: `${this.allStations.length} 个电台已就绪`
           })
         }
       },
       fail: (e) => {
-        console.warn('在线电台拉取跳过，继续使用本地预置电台:', e)
+        // continue with bundled list
       }
     })
   },
@@ -556,11 +740,9 @@ Page({
     }
   },
 
-  // 找离目标向量最近的电台及同城组
   groupAt(v) {
     if (!v || !this.visibleStations || this.visibleStations.length === 0) return []
 
-    let best = null
     let maxDot = -2
     for (const s of this.visibleStations) {
       const d = dot(s.v, v)
@@ -571,16 +753,13 @@ Page({
 
     if (maxDot < -1) return []
 
-    // 检查是否在 LOCK_DEG (3°) 范围内
     const distRad = Math.acos(Math.max(-1, Math.min(1, maxDot)))
     const distDegVal = distRad * 180 / Math.PI
     if (distDegVal > LOCK_DEG) return []
 
-    // 确定最佳匹配
-    best = this.visibleStations.find(s => dot(s.v, v) === maxDot)
+    const best = this.visibleStations.find(s => dot(s.v, v) === maxDot)
     if (!best) return []
 
-    // 同城范围 CITY_KM (30km)
     const cosCity = Math.cos(CITY_KM / 6371.0)
     const group = this.visibleStations
       .filter(s => dot(s.v, best.v) >= cosCity)
@@ -603,7 +782,6 @@ Page({
       return
     }
 
-    // 若当前正在播放的电台仍属于新同城组，保持播放
     const cur = this.data.currentStation
     if (cur && g.some(s => s.url === cur.url)) {
       const idx = g.findIndex(s => s.url === cur.url)
@@ -757,7 +935,6 @@ Page({
     this.audio.src = cur.url
     this.audio.play()
 
-    // 连接超时检测
     this.connectTimer = setTimeout(() => {
       if (this.audio && !this.data.isPlaying) {
         console.warn('[Audio] 连接超时')
