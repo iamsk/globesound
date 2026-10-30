@@ -1,0 +1,278 @@
+/**
+ * globesound 标定页样式
+ * 暗色主题，引导式步骤布局
+ */
+
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: 32rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== 进度条 ========== */
+.progress-section {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 40rpx;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 4rpx;
+  transition: width 0.4s ease;
+}
+
+.progress-label {
+  font-size: 24rpx;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+/* ========== 步骤内容 ========== */
+.step-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.step-number {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 36rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 72rpx;
+  text-align: center;
+}
+
+.step-name {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+/* 坐标信息 */
+.point-coord {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.coord-label {
+  font-size: 24rpx;
+  color: var(--color-muted);
+}
+
+.coord-value {
+  font-size: 26rpx;
+  color: var(--color-live);
+  font-family: 'Menlo', 'Courier New', monospace;
+}
+
+/* ========== 小地图 ========== */
+.map-container {
+  width: 100%;
+  height: 360rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  border: 2rpx solid var(--color-border);
+  margin-bottom: 32rpx;
+}
+
+.calib-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* ========== 操作说明 ========== */
+.instruction-box {
+  width: 100%;
+  background: var(--color-panel);
+  border: 1rpx solid var(--color-border);
+  border-radius: 12rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 28rpx;
+}
+
+.instruction-text {
+  font-size: 28rpx;
+  color: var(--color-text);
+  line-height: 1.7;
+}
+
+/* ========== 状态反馈 ========== */
+.feedback {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+  height: 56rpx;
+}
+
+.feedback.success {
+  color: var(--color-live);
+}
+
+.feedback-icon {
+  font-size: 36rpx;
+  font-weight: bold;
+}
+
+.feedback-text {
+  font-size: 28rpx;
+  color: var(--color-muted);
+}
+
+.feedback.success .feedback-text {
+  color: var(--color-live);
+}
+
+/* 加载动画 */
+.spinner {
+  width: 36rpx;
+  height: 36rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== 确认按钮 ========== */
+.confirm-btn {
+  width: 80%;
+  margin-top: auto;
+  margin-bottom: 48rpx;
+}
+
+/* ========== 标定结果 ========== */
+.result-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding-top: 80rpx;
+}
+
+.result-icon {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+  margin-bottom: 32rpx;
+}
+
+.result-icon.success {
+  background: rgba(79, 209, 197, 0.15);
+  color: var(--color-live);
+  border: 4rpx solid var(--color-live);
+}
+
+.result-icon.warn {
+  background: rgba(255, 181, 71, 0.15);
+  color: var(--color-accent);
+  border: 4rpx solid var(--color-accent);
+}
+
+.result-title {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: var(--color-text);
+  margin-bottom: 40rpx;
+}
+
+/* 残差显示 */
+.rms-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx 48rpx;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.rms-box.good {
+  background: rgba(79, 209, 197, 0.08);
+  border: 1rpx solid rgba(79, 209, 197, 0.3);
+}
+
+.rms-box.warn {
+  background: rgba(255, 181, 71, 0.08);
+  border: 1rpx solid rgba(255, 181, 71, 0.3);
+}
+
+.rms-label {
+  font-size: 24rpx;
+  color: var(--color-muted);
+  margin-bottom: 8rpx;
+}
+
+.rms-value {
+  font-size: 56rpx;
+  font-weight: bold;
+  font-family: 'Menlo', 'Courier New', monospace;
+}
+
+.rms-box.good .rms-value {
+  color: var(--color-live);
+}
+
+.rms-box.warn .rms-value {
+  color: var(--color-accent);
+}
+
+/* 警告框 */
+.warn-box {
+  background: rgba(255, 181, 71, 0.1);
+  border: 1rpx solid rgba(255, 181, 71, 0.3);
+  border-radius: 12rpx;
+  padding: 20rpx 28rpx;
+  margin-bottom: 40rpx;
+  width: 85%;
+}
+
+.warn-text {
+  font-size: 26rpx;
+  color: var(--color-accent);
+  line-height: 1.6;
+}
+
+/* 结果按钮 */
+.result-btn {
+  width: 80%;
+  margin-bottom: 24rpx;
+}

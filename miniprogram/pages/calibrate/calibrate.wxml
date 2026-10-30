@@ -1,0 +1,102 @@
+<!--
+  globesound 标定页
+  功能：引导用户完成 4 点标定，计算旋转矩阵，保存校准数据
+-->
+<view class="page">
+
+  <!-- ========== 进度条 ========== -->
+  <view class="progress-section" wx:if="{{!done}}">
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{(step + 1) / totalSteps * 100}}%"></view>
+    </view>
+    <text class="progress-label">{{step + 1}} / {{totalSteps}}</text>
+  </view>
+
+  <!-- ========== 标定步骤 ========== -->
+  <view class="step-section" wx:if="{{!done}}">
+
+    <!-- 步骤标题 -->
+    <view class="step-header">
+      <text class="step-number">{{step + 1}}</text>
+      <text class="step-name">{{currentPoint.name}}</text>
+    </view>
+
+    <!-- 坐标信息 -->
+    <view class="point-coord">
+      <text class="coord-label">目标坐标</text>
+      <text class="coord-value">{{pointLatText}}, {{pointLonText}}</text>
+    </view>
+
+    <!-- 小地图：显示目标点 -->
+    <view class="map-container">
+      <map
+        id="calibMap"
+        class="calib-map"
+        latitude="{{pointLat}}"
+        longitude="{{pointLon}}"
+        scale="3"
+        markers="{{markers}}"
+        show-location="{{false}}"
+        enable-zoom="{{false}}"
+        enable-scroll="{{false}}"
+        enable-rotate="{{false}}"
+      ></map>
+    </view>
+
+    <!-- 操作说明 -->
+    <view class="instruction-box">
+      <text class="instruction-text">{{statusText}}</text>
+    </view>
+
+    <!-- 状态反馈 -->
+    <view class="feedback" wx:if="{{waiting}}">
+      <view class="spinner"></view>
+      <text class="feedback-text">等待静止……</text>
+    </view>
+    <view class="feedback success" wx:if="{{recorded}}">
+      <text class="feedback-icon">✓</text>
+      <text class="feedback-text">已记录</text>
+    </view>
+
+    <!-- 确认按钮 -->
+    <button
+      class="btn btn-accent confirm-btn"
+      disabled="{{waiting || recorded}}"
+      bindtap="onConfirm"
+    >
+      {{waiting ? '检测中…' : (recorded ? '已记录 ✓' : '确认')}}
+    </button>
+  </view>
+
+  <!-- ========== 标定结果 ========== -->
+  <view class="result-section" wx:if="{{done}}">
+
+    <!-- 成功图标 -->
+    <view class="result-icon {{rmsWarn ? 'warn' : 'success'}}">
+      <text>{{rmsWarn ? '⚠' : '✓'}}</text>
+    </view>
+
+    <!-- 标题 -->
+    <text class="result-title">标定完成</text>
+
+    <!-- 残差值 -->
+    <view class="rms-box {{rmsWarn ? 'warn' : 'good'}}">
+      <text class="rms-label">残差（RMS）</text>
+      <text class="rms-value">{{rmsDeg}}°</text>
+    </view>
+
+    <!-- 警告信息 -->
+    <view class="warn-box" wx:if="{{rmsWarn}}">
+      <text class="warn-text">{{statusText}}</text>
+    </view>
+
+    <!-- 操作按钮 -->
+    <button class="btn btn-accent result-btn" bindtap="onStartUse">开始使用</button>
+    <button
+      class="btn btn-outline result-btn"
+      wx:if="{{rmsWarn}}"
+      bindtap="onRecalibrate"
+    >重新标定</button>
+  </view>
+
+</view>

@@ -1,0 +1,144 @@
+<!--
+  globesound 设置页
+-->
+<view class="page">
+
+  <!-- ========== 蓝牙传感器 ========== -->
+  <view class="section">
+    <text class="section-title">蓝牙姿态传感器</text>
+    <view class="card">
+      <view class="item">
+        <text class="label">设备状态</text>
+        <view class="value-row">
+          <view class="status-dot {{bleConnected ? 'connected' : 'disconnected'}}"></view>
+          <text class="value">{{bleConnected ? '已连接' : '未连接'}}</text>
+        </view>
+      </view>
+      <view class="item" wx:if="{{bleConnected && deviceName}}">
+        <text class="label">设备名称</text>
+        <text class="value">{{deviceName}}</text>
+      </view>
+      <view class="item" wx:if="{{bleConnected && deviceId}}">
+        <text class="label">设备地址 / ID</text>
+        <text class="value text-mono">{{deviceId}}</text>
+      </view>
+      <view class="item">
+        <text class="label">适配型号</text>
+        <text class="value text-muted">BWT901BLECL (BLE 5.0)</text>
+      </view>
+
+      <view class="card-btn-row">
+        <button
+          class="btn {{bleConnected ? 'btn-danger' : 'btn-live'}} full-width"
+          bindtap="onToggleBLE"
+        >
+          {{bleConnected ? '断开连接' : '连接传感器'}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 地球仪标定 ========== -->
+  <view class="section">
+    <text class="section-title">姿态标定</text>
+    <view class="card">
+      <view class="item">
+        <text class="label">标定状态</text>
+        <text class="value {{isCalibrated ? 'text-accent' : 'text-muted'}}">
+          {{isCalibrated ? '已标定' : '未标定'}}
+        </text>
+      </view>
+      <view class="item" wx:if="{{isCalibrated}}">
+        <text class="label">标定残差 (RMS)</text>
+        <text class="value text-mono text-live">{{rmsDeg}}°</text>
+      </view>
+      <view class="desc">
+        通过 4 个已知地理坐标点求解传感器坐标系到地理坐标系的正交旋转矩阵。
+      </view>
+
+      <view class="card-btn-row double-btn">
+        <button class="btn btn-accent flex-1" bindtap="onGoCalibrate">
+          {{isCalibrated ? '重新标定' : '开始标定'}}
+        </button>
+        <button
+          class="btn btn-outline flex-1"
+          wx:if="{{isCalibrated}}"
+          bindtap="onClearCalib"
+        >
+          清除标定
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 电台目录 ========== -->
+  <view class="section">
+    <text class="section-title">电台与网络</text>
+    <view class="card">
+      <view class="item">
+        <text class="label">电台库容量</text>
+        <text class="value text-mono text-live">1,600+ 全球电台</text>
+      </view>
+      <view class="item">
+        <text class="label">国内覆盖</text>
+        <text class="value">全国 34 个省市直辖市及港澳台</text>
+      </view>
+      <view class="item">
+        <text class="label">数据源</text>
+        <text class="value text-muted">Radio Garden / Radio Browser</text>
+      </view>
+      <view class="item">
+        <text class="label">锁定范围</text>
+        <text class="value">3.0° / 同城 30km</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 原理与注意事项 ========== -->
+  <view class="section">
+    <text class="section-title">使用说明</text>
+    <view class="card">
+      <view class="guide-item">
+        <text class="guide-num">1</text>
+        <view class="guide-content">
+          <text class="guide-title">读数点定为子午圈最高点正下方</text>
+          <text class="guide-text">球静止时，仅依靠重力加速度计确定天顶方向，不依赖磁力计，彻底避免磁漂移。</text>
+        </view>
+      </view>
+      <view class="guide-item">
+        <text class="guide-num">2</text>
+        <view class="guide-content">
+          <text class="guide-title">滑动子午圈调节纬度</text>
+          <text class="guide-text">万向地球仪的子午圈可在支架中滑动。若仅自转，读数点始终位于同一纬度圈上。</text>
+        </view>
+      </view>
+      <view class="guide-item">
+        <text class="guide-num">3</text>
+        <view class="guide-content">
+          <text class="guide-title">配平与减震</text>
+          <text class="guide-text">传感器内部安装后需在对面加装等重配重，避免重心偏离引起球体自转。</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 关于 ========== -->
+  <view class="section">
+    <text class="section-title">关于</text>
+    <view class="card">
+      <view class="item">
+        <text class="label">应用名称</text>
+        <text class="value">globesound 微信小程序版</text>
+      </view>
+      <view class="item">
+        <text class="label">版本</text>
+        <text class="value text-mono">1.0.0</text>
+      </view>
+      <view class="item">
+        <text class="label">算法</text>
+        <text class="value text-muted">Wahba / SVD 正交重构</text>
+      </view>
+    </view>
+  </view>
+
+</view>

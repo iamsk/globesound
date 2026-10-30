@@ -1,0 +1,417 @@
+/**
+ * globesound 主页样式
+ * 深色主题 + 玻璃拟态面板
+ */
+
+/* ===== 全局 ===== */
+page {
+  background: #05070d;
+  color: #e8e8ec;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  min-height: 100vh;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 140rpx);
+}
+
+/* ===== 顶部状态栏 ===== */
+.top-section {
+  padding: 24rpx 32rpx 16rpx;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.brand {
+  font-size: 34rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  color: #e8e8ec;
+  opacity: 0.85;
+}
+
+.settings-btn {
+  padding: 6rpx 14rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.65);
+}
+
+.settings-btn:active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* 连接状态胶囊 */
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.status-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #6b7280;
+  transition: background 0.3s ease;
+}
+
+.status-pill.moving .status-dot {
+  background: #4fd1c5;
+  box-shadow: 0 0 8rpx rgba(79, 209, 197, 0.6);
+}
+
+.status-pill.still .status-dot {
+  background: #ffb547;
+  box-shadow: 0 0 8rpx rgba(255, 181, 71, 0.6);
+}
+
+.status-text {
+  font-size: 24rpx;
+  color: rgba(232, 232, 236, 0.7);
+}
+
+/* 坐标显示 */
+.coord-block {
+  padding: 20rpx 0 8rpx;
+}
+
+.coord-text {
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: 56rpx;
+  font-weight: 600;
+  letter-spacing: 3rpx;
+  color: #e8e8ec;
+  display: block;
+  transition: color 0.3s ease;
+}
+
+.coord-sub {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.source-text {
+  font-size: 24rpx;
+  color: rgba(232, 232, 236, 0.45);
+}
+
+.recalibrate-btn {
+  font-size: 24rpx;
+  color: #4fd1c5;
+  opacity: 0.7;
+  padding: 4rpx 0;
+}
+
+.recalibrate-btn:active {
+  opacity: 1;
+}
+
+/* ===== 地图 ===== */
+.map-section {
+  position: relative;
+  margin: 16rpx 24rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.main-map {
+  width: 100%;
+  height: 480rpx;
+}
+
+.follow-btn {
+  position: absolute;
+  bottom: 20rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12rpx 32rpx;
+  border-radius: 32rpx;
+  background: rgba(5, 7, 13, 0.85);
+  border: 1rpx solid rgba(79, 209, 197, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+.follow-btn text {
+  font-size: 24rpx;
+  color: #4fd1c5;
+}
+
+.satellite-btn {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  padding: 10rpx 24rpx;
+  border-radius: 20rpx;
+  background: rgba(5, 7, 13, 0.75);
+  border: 1rpx solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+}
+
+.satellite-btn text {
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.7);
+}
+
+/* ===== Genre 筛选 ===== */
+.genre-bar {
+  padding: 12rpx 24rpx;
+  white-space: nowrap;
+}
+
+.genre-chip {
+  display: inline-block;
+  padding: 10rpx 28rpx;
+  margin-right: 14rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  font-size: 24rpx;
+  color: rgba(232, 232, 236, 0.6);
+  transition: all 0.2s ease;
+}
+
+.genre-chip.active {
+  background: rgba(79, 209, 197, 0.15);
+  border-color: rgba(79, 209, 197, 0.4);
+  color: #4fd1c5;
+}
+
+.genre-chip:active {
+  opacity: 0.7;
+}
+
+/* ===== 电台卡片 ===== */
+.radio-card {
+  margin: 16rpx 24rpx;
+  padding: 28rpx 32rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1rpx solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.kicker {
+  margin-bottom: 12rpx;
+}
+
+.kicker text {
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.4);
+  letter-spacing: 1rpx;
+  text-transform: uppercase;
+}
+
+.kicker.playing text {
+  color: #4fd1c5;
+}
+
+.kicker.locked text {
+  color: #ffb547;
+}
+
+.kicker.error text {
+  color: #ff6b4a;
+}
+
+.station-name {
+  display: block;
+  font-family: 'Georgia', 'Songti SC', 'Noto Serif SC', serif;
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #e8e8ec;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-meta {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(232, 232, 236, 0.4);
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-count {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.35);
+  margin-bottom: 16rpx;
+}
+
+/* 播放控制按钮 */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48rpx;
+  padding: 12rpx 0;
+}
+
+.ctrl-btn {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s ease;
+}
+
+.ctrl-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ctrl-btn.play-btn {
+  width: 100rpx;
+  height: 100rpx;
+  background: rgba(255, 107, 74, 0.15);
+  border-color: rgba(255, 107, 74, 0.35);
+}
+
+.ctrl-btn.play-btn.playing {
+  background: rgba(79, 209, 197, 0.15);
+  border-color: rgba(79, 209, 197, 0.35);
+}
+
+.ctrl-icon {
+  font-size: 32rpx;
+  color: #e8e8ec;
+}
+
+.play-btn .ctrl-icon {
+  color: #ff6b4a;
+}
+
+.play-btn.playing .ctrl-icon {
+  color: #4fd1c5;
+}
+
+/* 开始收听按钮 */
+.start-listen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 0;
+  border-radius: 16rpx;
+  background: rgba(255, 107, 74, 0.12);
+  border: 1rpx solid rgba(255, 107, 74, 0.3);
+  transition: all 0.2s ease;
+}
+
+.start-listen:active {
+  background: rgba(255, 107, 74, 0.2);
+}
+
+.start-listen text {
+  font-size: 30rpx;
+  color: #ff6b4a;
+  font-weight: 500;
+}
+
+/* ===== 读数历史 ===== */
+.fixes-section {
+  margin: 16rpx 24rpx;
+  padding: 20rpx 32rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1rpx solid rgba(255, 255, 255, 0.06);
+}
+
+.fixes-title {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(232, 232, 236, 0.35);
+  margin-bottom: 16rpx;
+  letter-spacing: 1rpx;
+}
+
+.fix-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.04);
+}
+
+.fix-item:last-child {
+  border-bottom: none;
+}
+
+.fix-coord {
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: 26rpx;
+  color: rgba(232, 232, 236, 0.65);
+}
+
+.fix-time {
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.3);
+}
+
+/* ===== 浮动蓝牙按钮 ===== */
+.ble-fab {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 40rpx);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 18rpx 48rpx;
+  border-radius: 44rpx;
+  background: rgba(79, 209, 197, 0.12);
+  border: 1rpx solid rgba(79, 209, 197, 0.35);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+.ble-fab text {
+  font-size: 30rpx;
+  color: #4fd1c5;
+  font-weight: 500;
+}
+
+.ble-fab:active {
+  transform: translateX(-50%) scale(0.95);
+  background: rgba(79, 209, 197, 0.2);
+}
+
+.ble-fab.connected {
+  background: rgba(255, 181, 71, 0.12);
+  border-color: rgba(255, 181, 71, 0.35);
+}
+
+.ble-fab.connected text {
+  color: #ffb547;
+}

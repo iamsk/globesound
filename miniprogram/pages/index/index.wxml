@@ -1,0 +1,119 @@
+<!--
+  globesound 主页
+  功能：连接蓝牙IMU、显示坐标、地图、播放最近电台
+-->
+<view class="page">
+
+  <!-- ========== 顶部状态栏 ========== -->
+  <view class="top-section">
+    <!-- 品牌 + 设置 + 连接状态 -->
+    <view class="status-bar">
+      <view class="brand-group">
+        <text class="brand">globesound</text>
+        <view class="settings-btn" bindtap="onOpenSettings">
+          <text>⚙ 设置</text>
+        </view>
+      </view>
+      <view class="status-pill {{statusClass}}">
+        <view class="status-dot"></view>
+        <text class="status-text">{{statusText}}</text>
+      </view>
+    </view>
+
+    <!-- 坐标显示 -->
+    <view class="coord-block">
+      <text class="coord-text">{{coordText}}</text>
+      <view class="coord-sub">
+        <text class="source-text">{{sourceText}}</text>
+        <text class="recalibrate-btn" wx:if="{{isCalibrated}}" bindtap="onRecalibrate">重新标定</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 中间地图 ========== -->
+  <view class="map-section">
+    <map
+      id="mainMap"
+      class="main-map"
+      latitude="{{mapLat}}"
+      longitude="{{mapLon}}"
+      scale="{{scale}}"
+      markers="{{allMarkers}}"
+      enable-satellite="{{satelliteOn}}"
+      show-location="{{false}}"
+      enable-zoom="{{true}}"
+      enable-scroll="{{true}}"
+      enable-rotate="{{false}}"
+      bindregionchange="onMapMove"
+    ></map>
+
+    <!-- 回到跟随按钮 -->
+    <view class="follow-btn" wx:if="{{!following}}" bindtap="onFollowBack">
+      <text>回到跟随</text>
+    </view>
+
+    <!-- 卫星视图切换 -->
+    <view class="satellite-btn" bindtap="onToggleSatellite">
+      <text>{{satelliteOn ? '标准' : '卫星'}}</text>
+    </view>
+  </view>
+
+  <!-- ========== Genre 筛选 ========== -->
+  <scroll-view class="genre-bar" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+    <view class="genre-chip {{currentGenre === '全部' ? 'active' : ''}}" data-genre="全部" bindtap="onGenreFilter">全部</view>
+    <view
+      wx:for="{{genres}}"
+      wx:key="*this"
+      class="genre-chip {{currentGenre === item ? 'active' : ''}}"
+      data-genre="{{item}}"
+      bindtap="onGenreFilter"
+    >{{item}}</view>
+  </scroll-view>
+
+  <!-- ========== 底部电台卡片 ========== -->
+  <view class="radio-card">
+    <!-- 状态提示 -->
+    <view class="kicker {{kickerClass}}">
+      <text>{{kickerText}}</text>
+    </view>
+
+    <!-- 电台名称 -->
+    <text class="station-name">{{stationName}}</text>
+
+    <!-- 元信息 -->
+    <text class="station-meta">{{stationMeta}}</text>
+
+    <!-- 同城计数 -->
+    <text class="group-count" wx:if="{{groupCountText}}">{{groupCountText}}</text>
+
+    <!-- 控制区域 -->
+    <view class="controls" wx:if="{{audioUnlocked}}">
+      <view class="ctrl-btn" bindtap="onPrevStation">
+        <text class="ctrl-icon">◀</text>
+      </view>
+      <view class="ctrl-btn play-btn {{isPlaying ? 'playing' : ''}}" bindtap="onTogglePlay">
+        <text class="ctrl-icon">{{isPlaying ? '❚❚' : '▶▶'}}</text>
+      </view>
+      <view class="ctrl-btn" bindtap="onNextStation">
+        <text class="ctrl-icon">▶</text>
+      </view>
+    </view>
+    <view class="start-listen" wx:else bindtap="onStartListen">
+      <text>开始收听</text>
+    </view>
+  </view>
+
+  <!-- ========== 读数历史 ========== -->
+  <view class="fixes-section" wx:if="{{fixes.length > 0}}">
+    <text class="fixes-title">最近读数</text>
+    <view class="fix-item" wx:for="{{fixes}}" wx:key="ts">
+      <text class="fix-coord">{{item.coordText}}</text>
+      <text class="fix-time">{{item.timeText}}</text>
+    </view>
+  </view>
+
+  <!-- ========== 浮动蓝牙按钮 ========== -->
+  <view class="ble-fab {{bleConnected ? 'connected' : ''}}" bindtap="onConnectBLE">
+    <text>{{bleConnecting ? '连接中…' : (bleConnected ? '断开蓝牙' : '连接蓝牙')}}</text>
+  </view>
+</view>

@@ -1,0 +1,186 @@
+/**
+ * globesound 全局样式
+ * 暗色主题，与桌面端项目保持一致
+ */
+
+/* ========== 主题变量（通过 page 选择器设定） ========== */
+page {
+  --color-bg: #05070d;
+  --color-panel: rgba(14, 18, 28, 0.8);
+  --color-border: rgba(255, 255, 255, 0.09);
+  --color-text: #e8ecf3;
+  --color-muted: #8a93a6;
+  --color-accent: #ffb547;
+  --color-live: #4fd1c5;
+  --color-play: #ff6b4a;
+
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* ========== 通用工具类 ========== */
+
+/* 弹性布局 */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-row { display: flex; flex-direction: row; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+
+/* 文本 */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.text-muted { color: var(--color-muted); }
+.text-accent { color: var(--color-accent); }
+.text-live { color: var(--color-live); }
+.text-play { color: var(--color-play); }
+.text-sm { font-size: 24rpx; }
+.text-md { font-size: 28rpx; }
+.text-lg { font-size: 32rpx; }
+.text-xl { font-size: 40rpx; }
+.text-xxl { font-size: 52rpx; }
+.font-bold { font-weight: bold; }
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 间距 */
+.p-sm { padding: 16rpx; }
+.p-md { padding: 24rpx; }
+.p-lg { padding: 32rpx; }
+.p-xl { padding: 48rpx; }
+.m-sm { margin: 16rpx; }
+.m-md { margin: 24rpx; }
+.m-lg { margin: 32rpx; }
+.mt-sm { margin-top: 16rpx; }
+.mt-md { margin-top: 24rpx; }
+.mt-lg { margin-top: 32rpx; }
+.mb-sm { margin-bottom: 16rpx; }
+.mb-md { margin-bottom: 24rpx; }
+.mb-lg { margin-bottom: 32rpx; }
+
+/* 面板 / 卡片 */
+.panel {
+  background: var(--color-panel);
+  border: 1rpx solid var(--color-border);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+/* 按钮 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  border: none;
+  padding: 0 48rpx;
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #05070d;
+}
+
+.btn-accent[disabled] {
+  opacity: 0.4;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-live {
+  background: var(--color-live);
+  color: #05070d;
+}
+
+.btn-play {
+  background: var(--color-play);
+  color: #ffffff;
+}
+
+.btn-danger {
+  background: #e74c3c;
+  color: #ffffff;
+}
+
+/* 分隔线 */
+.divider {
+  height: 1rpx;
+  background: var(--color-border);
+  margin: 24rpx 0;
+}
+
+/* 动画 - 脉冲呼吸效果 */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 动画 - 旋转 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1.5s linear infinite;
+}
+
+/* 状态指示灯 */
+.status-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 12rpx;
+}
+
+.status-dot.connected {
+  background: var(--color-live);
+  box-shadow: 0 0 8rpx var(--color-live);
+}
+
+.status-dot.disconnected {
+  background: var(--color-muted);
+}
+
+.status-dot.playing {
+  background: var(--color-play);
+  box-shadow: 0 0 8rpx var(--color-play);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 安全区域底部留白 */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 全屏容器 */
+.container {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
