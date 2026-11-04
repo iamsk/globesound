@@ -13,7 +13,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from bleak import BleakClient, BleakScanner
+
+try:
+    from bleak import BleakClient, BleakScanner
+except ImportError:
+    BleakClient = BleakScanner = None
 
 from . import stations, witmotion
 from .geo import CALIBRATION_POINTS, RMS_WARN_DEG, Calibration, StillDetector, calibrate
@@ -38,6 +42,7 @@ class Session:
         self.detector = StillDetector()
         self.up = None    # 最近一次静止时的"上"向量；转动中为 None
         self.live = None  # 低通后的加速度方向，转动中也有，只给网页做跟随用，精度不如 up
+        self.battery: int | None = None
 
     def on_notify(self, _sender, data: bytearray) -> None:
         for pkt in self.parser.feed(bytes(data)):
@@ -46,6 +51,8 @@ class Session:
             if 0.7 < n < 1.3:  # 甩得太猛时加速度不代表重力，这一帧不要
                 v = pkt.acc / n
                 self.live = v if self.live is None else self.live + self.LIVE_SMOOTH * (v - self.live)
+        if self.parser.battery is not None:
+            self.battery = self.parser.battery
 
     def reset(self) -> None:
         self.detector.reset()
@@ -110,15 +117,24 @@ async def readout(session: Session, cal: Calibration, args, alive, source: str) 
             v = session.up if session.up is not None else session.live
             if v is not None:
                 lat, lon = cal.to_latlon(v)
-                web.publish({"lat": round(lat, 3), "lon": round(lon, 3),
-                             "still": session.up is not None, "source": source})
+                web.publish({
+                    "lat": round(lat, 3),
+                    "lon": round(lon, 3),
+                    "still": session.up is not None,
+                    "source": source,
+                    "battery": session.battery,
+                })
         await asyncio.sleep(0.1)
 
 
 async def main_async(args) -> int:
+    if not args.simulate and (BleakScanner is None or BleakClient is None):
+        log("未安装 bleak 库，无法连接蓝牙设备。请运行: pip install bleak，或使用 --simulate 体验模拟模式")
+        return 1
     if args.simulate:
         sim = SimulatedGlobe(seed=args.seed)
         session = Session()
+        session.battery = 92  # 模拟模式默认提供 92% 良好电量展示
         log(f"模拟模式：虚拟地球仪按固定路线巡游（{'、'.join(n for n, _a, _b in TOUR)}），不读写标定文件")
         task = asyncio.create_task(sim.run(session.on_notify))
         await readout(session, sim.calibration(), args, lambda: not task.done(), "sim")
@@ -129,6 +145,26 @@ async def main_async(args) -> int:
     session = Session()
     async with BleakClient(target) as client:
         await client.start_notify(witmotion.NOTIFY_UUID, session.on_notify)
+
+        # 后台轮询电池电量（优先标准 BLE Battery Service，同时定期发送 0x27 0x64 指令）
+        async def poll_battery():
+            while client.is_connected:
+                # 方式 1：标准 BLE 电池服务读取
+                try:
+                    val = await client.read_gatt_char(witmotion.BATTERY_CHAR_UUID)
+                    if val and len(val) >= 1:
+                        session.battery = int(val[0])
+                except Exception:
+                    pass
+                # 方式 2：发送读取 0x64 电量寄存器指令
+                try:
+                    await client.write_gatt_char(witmotion.WRITE_UUID, witmotion.CMD_READ_BATTERY, response=False)
+                except Exception:
+                    pass
+                await asyncio.sleep(20)
+
+        battery_task = asyncio.create_task(poll_battery())
+
         calib_path = Path(args.calib_file)
         if calib_path.exists() and not args.recalibrate:
             cal = Calibration.load(calib_path)
@@ -136,7 +172,10 @@ async def main_async(args) -> int:
         else:
             cal = await run_calibration(session)
             cal.save(calib_path)
-        await readout(session, cal, args, lambda: client.is_connected, "ble")
+        try:
+            await readout(session, cal, args, lambda: client.is_connected, "ble")
+        finally:
+            battery_task.cancel()
         log("蓝牙已断开（检查电量和距离）")
     return 0
 

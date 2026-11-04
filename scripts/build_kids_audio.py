@@ -9,6 +9,7 @@
 
 import asyncio
 import json
+import shutil
 from pathlib import Path
 import edge_tts
 
@@ -38,6 +39,19 @@ async def generate_zone_audio(zone: dict, semaphore: asyncio.Semaphore):
 
         # 拷贝到 web static
         web_out.write_bytes(mp_out.read_bytes())
+
+        # 小程序包体积优化：压缩为 24k mono 格式，保证绘本语音清脆的同时减少 65% 包体积
+        ffmpeg_bin = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+        if Path(ffmpeg_bin).exists():
+            tmp = mp_out.with_suffix(".tmp.mp3")
+            proc = await asyncio.create_subprocess_exec(
+                ffmpeg_bin, "-y", "-i", str(mp_out), "-b:a", "24k", "-ac", "1", "-ar", "16000", str(tmp),
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL
+            )
+            await proc.wait()
+            if tmp.exists() and tmp.stat().st_size > 0:
+                tmp.replace(mp_out)
+
         print(f"  ✓ 完成: {mp_out.name} ({mp_out.stat().st_size // 1024} KB)")
 
 

@@ -1,13 +1,26 @@
 {
   "description": "globesound - 地球仪蓝牙音频项目",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "file",
+        "value": "data/stations.json"
+      },
+      {
+        "type": "file",
+        "value": "data/stations_extra.json"
+      },
+      {
+        "type": "file",
+        "value": "data/kids_zones.json"
+      }
+    ],
     "include": []
   },
   "setting": {
     "bundle": false,
     "userConfirmedBundleSwitch": false,
-    "urlCheck": true,
+    "urlCheck": false,
     "scopeDataCheck": false,
     "coverView": true,
     "es6": true,

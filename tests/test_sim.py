@@ -33,3 +33,13 @@ def test_live_direction_follows_motion():
         session.on_notify(None, bytearray(pkt))
     _n, lat, lon = TOUR[0]
     assert angle_deg(latlon_to_vec(*cal.to_latlon(session.live)), latlon_to_vec(lat, lon)) < 0.5
+
+
+def test_session_battery():
+    import struct
+    session = Session()
+    assert session.battery is None
+    pkt = b"\x55\x71" + struct.pack("<H", 0x64) + struct.pack("<h", 75) + b"\x00" * 14
+    session.on_notify(None, bytearray(pkt))
+    assert session.battery == 75
+

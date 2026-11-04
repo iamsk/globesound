@@ -1,12 +1,13 @@
 <!--
   globesound 主页
-  功能：连接蓝牙IMU、显示坐标、地图跟随、环球电台与萌宝乐园双模式切换
+  功能：连接蓝牙IMU、地图跟随、环球电台与萌宝乐园双模式切换、传感器电量、缩放控制
+  首页专注沉浸式探索，单屏自适应无滚动条；经纬度、数据来源及历史读数统一收纳至设置页
 -->
 <view class="page mode-{{currentMode}}">
 
   <!-- ========== 顶部状态栏 ========== -->
   <view class="top-section">
-    <!-- 品牌 + 设置 + 连接状态 -->
+    <!-- 品牌 + 设置 + 电量 + 连接状态 -->
     <view class="status-bar">
       <view class="brand-group">
         <text class="brand">{{currentMode === 'kids' ? '萌宝乐园' : 'globesound'}}</text>
@@ -14,18 +15,17 @@
           <text>⚙ 设置</text>
         </view>
       </view>
-      <view class="status-pill {{statusClass}}">
-        <view class="status-dot"></view>
-        <text class="status-text">{{statusText}}</text>
-      </view>
-    </view>
-
-    <!-- 坐标显示 -->
-    <view class="coord-block">
-      <text class="coord-text">{{coordText}}</text>
-      <view class="coord-sub">
-        <text class="source-text">{{sourceText}}</text>
-        <text class="recalibrate-btn" wx:if="{{isCalibrated}}" bindtap="onRecalibrate">重新标定</text>
+      <view class="status-right">
+        <!-- 传感器电量胶囊 -->
+        <view class="battery-pill {{batteryClass}}" wx:if="{{batteryLevel !== null}}">
+          <text class="bat-icon">{{batteryIcon}}</text>
+          <text class="bat-text">{{batteryLevel}}%</text>
+        </view>
+        <!-- 连接与姿态状态胶囊 -->
+        <view class="status-pill {{statusClass}}">
+          <view class="status-dot"></view>
+          <text class="status-text">{{statusText}}</text>
+        </view>
       </view>
     </view>
 
@@ -60,6 +60,8 @@
       latitude="{{mapLat}}"
       longitude="{{mapLon}}"
       scale="{{scale}}"
+      min-scale="3"
+      max-scale="18"
       markers="{{allMarkers}}"
       enable-satellite="{{satelliteOn}}"
       show-location="{{false}}"
@@ -69,126 +71,131 @@
       bindregionchange="onMapMove"
     ></map>
 
+    <!-- 地图右上控制组：卫星图切换 + 缩放按钮 -->
+    <view class="map-ctrls-top">
+      <view class="satellite-btn" bindtap="onToggleSatellite">
+        <text>{{satelliteOn ? '标准' : '卫星'}}</text>
+      </view>
+      <view class="zoom-btns">
+        <view class="zoom-btn" bindtap="onZoomIn" hover-class="zoom-btn-hover">
+          <text>+</text>
+        </view>
+        <view class="zoom-btn" bindtap="onZoomOut" hover-class="zoom-btn-hover">
+          <text>−</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 回到跟随按钮 -->
     <view class="follow-btn" wx:if="{{!following}}" bindtap="onFollowBack">
       <text>回到跟随</text>
     </view>
 
-    <!-- 卫星视图切换 -->
-    <view class="satellite-btn" bindtap="onToggleSatellite">
-      <text>{{satelliteOn ? '标准' : '卫星'}}</text>
+    <!-- 地图右下浮动蓝牙连接胶囊 -->
+    <view class="ble-map-btn {{bleConnected ? 'connected' : ''}}" bindtap="onConnectBLE">
+      <view class="ble-dot"></view>
+      <text>{{bleConnecting ? '连接中…' : (bleConnected ? '断开蓝牙' : '连接蓝牙')}}</text>
     </view>
   </view>
 
-  <!-- ========== 1. 环球电台模式 ========== -->
-  <block wx:if="{{currentMode === 'radio'}}">
-    <!-- Genre 筛选 -->
-    <scroll-view class="genre-bar" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
-      <view class="genre-chip {{currentGenre === '全部' ? 'active' : ''}}" data-genre="全部" bindtap="onGenreFilter">全部</view>
-      <view
-        wx:for="{{genres}}"
-        wx:key="*this"
-        class="genre-chip {{currentGenre === item ? 'active' : ''}}"
-        data-genre="{{item}}"
-        bindtap="onGenreFilter"
-      >{{item}}</view>
-    </scroll-view>
+  <!-- ========== 底部操作面板区 ========== -->
+  <view class="bottom-section">
+    <!-- 1. 环球电台模式 -->
+    <block wx:if="{{currentMode === 'radio'}}">
+      <!-- 风格流派筛选 -->
+      <scroll-view class="genre-bar" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="genre-chip {{currentGenre === '全部' ? 'active' : ''}}" data-genre="全部" bindtap="onGenreFilter">全部</view>
+        <view
+          wx:for="{{genres}}"
+          wx:key="*this"
+          class="genre-chip {{currentGenre === item ? 'active' : ''}}"
+          data-genre="{{item}}"
+          bindtap="onGenreFilter"
+        >{{item}}</view>
+      </scroll-view>
 
-    <!-- 电台卡片 -->
-    <view class="radio-card">
-      <view class="kicker {{kickerClass}}">
-        <text>{{kickerText}}</text>
-      </view>
-      <text class="station-name">{{stationName}}</text>
-      <text class="station-meta">{{stationMeta}}</text>
-      <text class="group-count" wx:if="{{groupCountText}}">{{groupCountText}}</text>
+      <!-- 电台卡片 -->
+      <view class="radio-card">
+        <view class="kicker {{kickerClass}}">
+          <text>{{kickerText}}</text>
+        </view>
+        <text class="station-name">{{stationName}}</text>
+        <text class="station-meta">{{stationMeta}}</text>
+        <text class="group-count" wx:if="{{groupCountText}}">{{groupCountText}}</text>
 
-      <view class="controls" wx:if="{{audioUnlocked}}">
-        <view class="ctrl-btn" bindtap="onPrevStation">
-          <text class="ctrl-icon">◀</text>
-        </view>
-        <view class="ctrl-btn play-btn {{isPlaying ? 'playing' : ''}}" bindtap="onTogglePlay">
-          <text class="ctrl-icon">{{isPlaying ? '❚❚' : '▶▶'}}</text>
-        </view>
-        <view class="ctrl-btn" bindtap="onNextStation">
-          <text class="ctrl-icon">▶</text>
-        </view>
-      </view>
-      <view class="start-listen" wx:else bindtap="onStartListen">
-        <text>开始收听</text>
-      </view>
-    </view>
-  </block>
-
-  <!-- ========== 2. 萌宝环球乐园模式 ========== -->
-  <block wx:if="{{currentMode === 'kids'}}">
-    <view class="kids-card" style="background: {{currentKidsZone.bgGradient || 'rgba(255, 255, 255, 0.05)'}}">
-      <!-- 头部标签 -->
-      <view class="kids-header">
-        <view class="kids-badge" style="background: {{currentKidsZone.badgeColor || '#48bb78'}}">
-          <text>{{currentKidsZone.tag || '地球萌友'}}</text>
-        </view>
-        <text class="kids-region">{{currentKidsZone.region || '广袤世界'}}</text>
-      </view>
-
-      <!-- 动物主视觉 -->
-      <view class="kids-main">
-        <view class="kids-avatar-wrap" bindtap="onKidsPlaySound" hover-class="kids-avatar-tap">
-          <text class="kids-avatar">{{currentKidsZone.emoji || '🐼'}}</text>
-        </view>
-        <view class="kids-info">
-          <text class="kids-title">{{currentKidsZone.name || '转动地球仪探索'}}</text>
-          <view class="kids-action-bubble">
-            <text class="kids-action-text">{{currentKidsZone.action || '转一转，看谁跳出来！'}}</text>
+        <view class="controls" wx:if="{{audioUnlocked}}">
+          <view class="ctrl-btn" bindtap="onPrevStation">
+            <text class="ctrl-icon">◀</text>
+          </view>
+          <view class="ctrl-btn play-btn {{isPlaying ? 'playing' : ''}}" bindtap="onTogglePlay">
+            <text class="ctrl-icon">{{isPlaying ? '❚❚' : '▶▶'}}</text>
+          </view>
+          <view class="ctrl-btn" bindtap="onNextStation">
+            <text class="ctrl-icon">▶</text>
           </view>
         </view>
-      </view>
-
-      <!-- 幼儿对话语泡 -->
-      <view class="kids-bubble">
-        <text class="kids-bubble-quote">“</text>
-        <text class="kids-bubble-text">{{currentKidsZone.talk || '轻轻转动地球仪，小动物就在里面等你呢！'}}</text>
-        <text class="kids-bubble-quote">”</text>
-      </view>
-
-      <!-- 播放故事语音按钮 -->
-      <view class="kids-btn-row">
-        <button class="kids-play-btn" bindtap="onKidsPlaySound">
-          <text class="kids-play-icon">🗣️</text>
-          <text>听小萌友讲故事</text>
-        </button>
-      </view>
-
-      <!-- 附近萌友候选（点击可直接吸附微调） -->
-      <view class="kids-candidates" wx:if="{{kidsCandidates && kidsCandidates.length > 0}}">
-        <text class="candidates-title">附近还有萌友：</text>
-        <view class="candidate-list">
-          <view
-            wx:for="{{kidsCandidates}}"
-            wx:key="id"
-            class="candidate-chip {{currentKidsZone.id === item.id ? 'active' : ''}}"
-            data-id="{{item.id}}"
-            bindtap="onSelectKidsCandidate"
-          >
-            <text class="cand-emoji">{{item.emoji}}</text>
-            <text class="cand-name">{{item.animal}}</text>
-          </view>
+        <view class="start-listen" wx:else bindtap="onStartListen">
+          <text>开始收听</text>
         </view>
       </view>
-    </view>
-  </block>
+    </block>
 
-  <!-- ========== 读数历史 ========== -->
-  <view class="fixes-section" wx:if="{{fixes.length > 0}}">
-    <text class="fixes-title">最近读数</text>
-    <view class="fix-item" wx:for="{{fixes}}" wx:key="ts">
-      <text class="fix-coord">{{item.coordText}}</text>
-      <text class="fix-time">{{item.timeText}}</text>
-    </view>
-  </view>
+    <!-- 2. 萌宝环球乐园模式 -->
+    <block wx:if="{{currentMode === 'kids'}}">
+      <view class="kids-card" style="background: {{currentKidsZone.bgGradient || 'rgba(255, 255, 255, 0.05)'}}">
+        <!-- 头部标签 -->
+        <view class="kids-header">
+          <view class="kids-badge" style="background: {{currentKidsZone.badgeColor || '#48bb78'}}">
+            <text>{{currentKidsZone.tag || '地球国宝'}}</text>
+          </view>
+          <text class="kids-region">{{currentKidsZone.country ? currentKidsZone.country + ' · ' + currentKidsZone.region : (currentKidsZone.region || '广袤世界')}}</text>
+        </view>
 
-  <!-- ========== 浮动蓝牙按钮 ========== -->
-  <view class="ble-fab {{bleConnected ? 'connected' : ''}}" bindtap="onConnectBLE">
-    <text>{{bleConnecting ? '连接中…' : (bleConnected ? '断开蓝牙' : '连接蓝牙')}}</text>
+        <!-- 动物主视觉 -->
+        <view class="kids-main">
+          <view class="kids-avatar-wrap" bindtap="onKidsPlaySound" hover-class="kids-avatar-tap">
+            <text class="kids-avatar">{{currentKidsZone.emoji || '🐼'}}</text>
+          </view>
+          <view class="kids-info">
+            <text class="kids-title">{{currentKidsZone.name || '转动地球仪探索'}}</text>
+            <view class="kids-action-bubble">
+              <text class="kids-action-text">{{currentKidsZone.treasure ? '✨ ' + currentKidsZone.treasure : (currentKidsZone.action || '转一转，看谁跳出来！')}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 幼儿对话语泡 -->
+        <view class="kids-bubble">
+          <text class="kids-bubble-quote">“</text>
+          <text class="kids-bubble-text">{{currentKidsZone.talk || '轻轻转动地球仪，小动物就在里面等你呢！'}}</text>
+          <text class="kids-bubble-quote">”</text>
+        </view>
+
+        <!-- 播放故事语音按钮 -->
+        <view class="kids-btn-row">
+          <button class="kids-play-btn {{kidsSpeaking ? 'speaking' : ''}}" bindtap="onKidsPlaySound">
+            <text class="kids-play-icon">{{kidsSpeaking ? '🔊' : '🗣️'}}</text>
+            <text>{{kidsSpeaking ? '小萌友讲述中…' : '听小萌友讲故事'}}</text>
+          </button>
+        </view>
+
+        <!-- 附近萌友候选 -->
+        <view class="kids-candidates" wx:if="{{kidsCandidates && kidsCandidates.length > 0}}">
+          <text class="candidates-title">附近还有萌友：</text>
+          <scroll-view class="candidate-list" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+            <view
+              wx:for="{{kidsCandidates}}"
+              wx:key="id"
+              class="candidate-chip {{currentKidsZone.id === item.id ? 'active' : ''}}"
+              data-id="{{item.id}}"
+              bindtap="onSelectKidsCandidate"
+            >
+              <text class="cand-emoji">{{item.emoji}}</text>
+              <text class="cand-name">{{item.animal}}</text>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+    </block>
   </view>
 </view>

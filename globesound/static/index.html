@@ -51,11 +51,21 @@
   .hud { position: fixed; top: 16px; left: 16px; width: 280px; padding: 14px 16px; z-index: 10; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .brand { font-weight: 600; letter-spacing: .02em; }
+  .hud-pills { display: flex; align-items: center; gap: 6px; }
   .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
     font-size: 12px; background: rgba(255,255,255,.06); color: var(--muted); white-space: nowrap; }
   .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--off); }
   .pill.moving i { background: var(--live); }
   .pill.still i { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .pill.battery { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .pill.battery .bat-icon { font-size: 13px; line-height: 1; margin-right: -2px; }
+  .pill.battery.good { color: #68d391; background: rgba(72, 187, 120, 0.12); border: 1px solid rgba(72, 187, 120, 0.25); }
+  .pill.battery.medium { color: #f6ad55; background: rgba(246, 173, 85, 0.12); border: 1px solid rgba(246, 173, 85, 0.25); }
+  .pill.battery.low { color: #fc8181; background: rgba(245, 101, 101, 0.15); border: 1px solid rgba(245, 101, 101, 0.35); animation: bat-pulse 1.8s infinite; }
+  @keyframes bat-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
   .coord { font: 600 26px/1.1 var(--mono); margin: 12px 0 2px; font-variant-numeric: tabular-nums; }
   .sub { color: var(--muted); font-size: 12px; }
   .label { color: var(--muted); font-size: 11px; letter-spacing: .08em; margin: 14px 0 4px; }
@@ -159,6 +169,12 @@
     color: var(--text); font-size: 11px; white-space: nowrap; cursor: pointer; transition: all 0.15s;
   }
   .kids-cand-chip:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-1px); }
+  .kids-cand-chip.on {
+    background: rgba(72, 187, 120, 0.25);
+    border-color: #48bb78;
+    color: #fff;
+    font-weight: 600;
+  }
 
   /* 3D地球上的萌友大图钉 */
   .kids-pin {
@@ -212,7 +228,12 @@
 <section class="hud glass">
   <div class="row">
     <span class="brand">环宇寻声</span>
-    <span class="pill" id="status"><i></i><span>等待数据</span></span>
+    <div class="hud-pills">
+      <span class="pill battery" id="battery" title="传感器电量">
+        <span class="bat-icon" id="batteryIcon">🔋</span><span id="batteryText">--%</span>
+      </span>
+      <span class="pill" id="status"><i></i><span>等待数据</span></span>
+    </div>
   </div>
   <div class="coord" id="coord">—</div>
   <div class="row">
@@ -257,7 +278,7 @@
   </div>
   <div class="kids-actions">
     <button class="kids-btn sfx" id="kidsSfxBtn" style="background: linear-gradient(135deg, #48bb78, #38a169); color: #fff;">
-      <span>🗣️</span><span>听小萌友讲故事</span>
+      <span id="kidsSfxIcon">🗣️</span><span id="kidsSfxText">听小萌友讲故事</span>
     </button>
     <button class="kids-btn talk" id="kidsTalkBtn" title="重播故事">
       <span>🔊 再次重播</span>
@@ -588,34 +609,65 @@ function matchKidsZone(v) {
 }
 
 const kidsVoiceAudio = new Audio();
+kidsVoiceAudio.preload = "auto";
+
+function setKidsSpeakingUI(speaking) {
+  const icon = $("kidsSfxIcon");
+  const text = $("kidsSfxText");
+  const btn = $("kidsSfxBtn");
+  if (icon) icon.textContent = speaking ? "🔊" : "🗣️";
+  if (text) text.textContent = speaking ? "小萌友讲述中…" : "听小萌友讲故事";
+  if (btn) {
+    if (speaking) {
+      btn.style.boxShadow = "0 0 16px rgba(72,187,120,0.85)";
+      btn.style.filter = "brightness(1.08)";
+    } else {
+      btn.style.boxShadow = "";
+      btn.style.filter = "";
+    }
+  }
+}
+
+kidsVoiceAudio.onplay = () => setKidsSpeakingUI(true);
+kidsVoiceAudio.onended = () => setKidsSpeakingUI(false);
+kidsVoiceAudio.onpause = () => setKidsSpeakingUI(false);
+kidsVoiceAudio.onerror = () => setKidsSpeakingUI(false);
+
 function playZoneAudio(zoneId) {
   if (!zoneId) return;
   kidsVoiceAudio.pause();
   kidsVoiceAudio.src = `/audio/kids/${zoneId}.mp3`;
-  kidsVoiceAudio.play().catch(e => {
-    console.warn("Audio play blocked, fallback to speech:", e);
-    if (curKidsZone) speakKidsStory(curKidsZone.talk);
-  });
+  kidsVoiceAudio.currentTime = 0;
+  const p = kidsVoiceAudio.play();
+  if (p && p.catch) {
+    p.catch(e => {
+      console.warn("Audio play blocked, fallback to speech:", e);
+      if (curKidsZone) speakKidsStory(curKidsZone.talk);
+    });
+  }
 }
 
 function lockKidsZone(z, playSfx = true) {
   if (!z) return;
   curKidsZone = z;
-  $("kidsEmoji").textContent = z.emoji;
-  $("kidsTag").textContent = z.tag || "地球萌友";
-  $("kidsTag").style.background = z.badgeColor || "var(--kids)";
-  $("kidsRegion").textContent = z.region || "广袤世界";
-  $("kidsName").textContent = z.name;
-  $("kidsTalk").textContent = z.talk;
-  $("kidsAction").textContent = z.action || "嗷呜~";
+  if ($("kidsAvatar")) $("kidsAvatar").textContent = z.emoji;
+  if ($("kidsTag")) {
+    $("kidsTag").textContent = z.tag || "地球国宝";
+    $("kidsTag").style.background = z.badgeColor || "var(--kids)";
+  }
+  if ($("kidsRegion")) $("kidsRegion").textContent = z.country ? `${z.country} · ${z.region}` : (z.region || "广袤世界");
+  if ($("kidsName")) $("kidsName").textContent = z.name;
+  if ($("kidsTalk")) $("kidsTalk").textContent = z.talk;
 
   tag.innerHTML = `<small>萌宝乐园 · ${esc(z.region)}</small>${z.emoji} ${esc(z.name)}`;
 
   // 附近萌友候选
   const { candidates } = matchKidsZone(z.v);
-  $("kidsCandidates").innerHTML = candidates.map(c =>
-    `<button class="kids-cand-chip" data-id="${c.id}">${c.emoji} ${esc(c.animal)}</button>`
-  ).join("");
+  if ($("kidsCandidates")) {
+    $("kidsCandidates").innerHTML = candidates.map(c =>
+      `<button class="kids-cand-chip${c.id === z.id ? " on" : ""}" data-id="${c.id}">${c.emoji} ${esc(c.animal)}</button>`
+    ).join("");
+  }
 
   // 3D 地球波纹高亮
   world.ringsData([{
@@ -670,6 +722,8 @@ function switchMode(mode) {
     const { best } = matchKidsZone(v);
     if (best) lockKidsZone(best, true);
   } else {
+    kidsVoiceAudio.pause();
+    setKidsSpeakingUI(false);
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     $("modeRadio").className = "mode-btn on";
     $("modeKids").className = "mode-btn kids";
@@ -870,6 +924,31 @@ function setStatus(cls, text) {
   $("status").lastElementChild.textContent = text;
 }
 
+function updateBatteryDisplay(pct) {
+  const el = $("battery");
+  if (!el) return;
+  if (pct === null || pct === undefined || isNaN(pct)) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "inline-flex";
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  const txt = $("batteryText");
+  if (txt) txt.textContent = `${p}%`;
+  el.classList.remove("good", "medium", "low");
+  const icon = $("batteryIcon") || el.querySelector(".bat-icon");
+  if (p < 20) {
+    el.classList.add("low");
+    if (icon) icon.textContent = "🪫";
+  } else if (p < 50) {
+    el.classList.add("medium");
+    if (icon) icon.textContent = "🔋";
+  } else {
+    el.classList.add("good");
+    if (icon) icon.textContent = "🔋";
+  }
+}
+
 let lastStill = false, staleTimer = null, lastPreview = 0;
 const es = new EventSource("/events");
 es.onmessage = e => {
@@ -879,6 +958,9 @@ es.onmessage = e => {
   $("source").textContent = s.source === "sim" ? "数据来源：模拟器" : "数据来源：BWT901BLECL";
   setStatus(s.still ? "still" : "moving", s.still ? "静止 · 已读数" : "转动中");
   reticle.className = "reticle" + (s.still ? " still" : "");
+  if (s.battery !== undefined) {
+    updateBatteryDisplay(s.battery);
+  }
   if (s.still && !lastStill) {
     addFix(s.lat, s.lon);
     if (currentMode === "kids") {

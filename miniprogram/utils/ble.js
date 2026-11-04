@@ -3,7 +3,7 @@
  * 封装微信蓝牙 API，专用于连接 WitMotion BWT901BLECL IMU 传感器
  */
 
-const { PacketParser, looksLikeWitmotion, SERVICE_UUID, NOTIFY_UUID } = require('./witmotion')
+const { PacketParser, looksLikeWitmotion, SERVICE_UUID, NOTIFY_UUID, CMD_READ_BATTERY } = require('./witmotion')
 
 /**
  * BLE 连接管理器
@@ -39,9 +39,17 @@ class BLEManager {
     /** @type {Function|null} 适配器状态变化回调 (available: boolean) => void */
     this.onAdapterChange = null
 
+    /** @type {number|null} 传感器剩余电量百分比 */
+    this.battery = null
+    /** @type {Function|null} 电量变化回调 (battery: number) => void */
+    this.onBatteryChange = null
+    /** @type {any} 周期查询电量定时器 */
+    this._batteryTimer = null
+
     /** @type {Set<Function>} 多监听器集合 */
     this._packetListeners = new Set()
     this._connectionListeners = new Set()
+    this._batteryListeners = new Set()
 
     // 绑定内部回调（确保 this 指向正确）
     this._onCharValueChange = this._handleCharValueChange.bind(this)
@@ -67,6 +75,19 @@ class BLEManager {
 
   removeConnectionListener(fn) {
     this._connectionListeners.delete(fn)
+  }
+
+  addBatteryListener(fn) {
+    if (typeof fn === 'function') {
+      this._batteryListeners.add(fn)
+      if (this.battery !== null) {
+        try { fn(this.battery) } catch (e) {}
+      }
+    }
+  }
+
+  removeBatteryListener(fn) {
+    this._batteryListeners.delete(fn)
   }
 
   /**
@@ -203,6 +224,18 @@ class BLEManager {
       setTimeout(() => {
         this.configureRate(10)
       }, 500)
+
+      // 延迟 1000ms 首次查询电量，之后每隔 25 秒定时轮询
+      setTimeout(() => {
+        this.queryBattery()
+      }, 1000)
+
+      if (this._batteryTimer) clearInterval(this._batteryTimer)
+      this._batteryTimer = setInterval(() => {
+        if (this.connected) {
+          this.queryBattery()
+        }
+      }, 25000)
 
       // 触发连接回调
       if (this.onConnectionChange) {
@@ -418,6 +451,34 @@ class BLEManager {
   }
 
   /**
+   * 查询传感器剩余电量 (下发 0xFF 0xAA 0x27 0x64 0x00 读取 0x64 寄存器)
+   */
+  queryBattery() {
+    if (!this.deviceId || !this.serviceId || !this.writeCharacteristicId) {
+      return Promise.resolve(false)
+    }
+
+    const cmd = new Uint8Array(CMD_READ_BATTERY).buffer
+
+    return new Promise((resolve) => {
+      wx.writeBLECharacteristicValue({
+        deviceId: this.deviceId,
+        serviceId: this.serviceId,
+        characteristicId: this.writeCharacteristicId,
+        value: cmd,
+        success: () => {
+          console.log('[BLE] ✓ 已发送查询电量指令 (0x64)')
+          resolve(true)
+        },
+        fail: (err) => {
+          console.warn('[BLE] 发送查询电量失败:', err)
+          resolve(false)
+        }
+      })
+    })
+  }
+
+  /**
    * 启用 BLE 特征值通知
    * @private
    */
@@ -447,6 +508,18 @@ class BLEManager {
 
     // 将数据送入解析器
     const packets = this.parser.feed(res.value)
+
+    // 监测电量更新
+    if (this.parser.battery !== null && this.parser.battery !== this.battery) {
+      this.battery = this.parser.battery
+      console.log(`[BLE] 捕获传感器电量: ${this.battery}%`)
+      if (this.onBatteryChange) {
+        this.onBatteryChange(this.battery)
+      }
+      for (const fn of this._batteryListeners) {
+        try { fn(this.battery) } catch (e) { console.error(e) }
+      }
+    }
 
     // 回调每个解析出的数据包
     if (packets.length > 0) {
@@ -515,6 +588,11 @@ class BLEManager {
    * @private
    */
   _cleanup() {
+    if (this._batteryTimer) {
+      clearInterval(this._batteryTimer)
+      this._batteryTimer = null
+    }
+    this.battery = null
     this.deviceId = null
     this.deviceName = null
     this.serviceId = null

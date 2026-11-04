@@ -24,3 +24,16 @@ def test_device_detection():
     assert looks_like_witmotion("WT901BLE68", [])
     assert looks_like_witmotion(None, ["0000ffe5-0000-1000-8000-00805f9a34fb"])
     assert not looks_like_witmotion("AirPods", [])
+
+
+def test_battery_packet_parsing():
+    import struct
+    from globesound.witmotion import parse_battery_packet, PacketParser
+
+    # 构造 0x55 0x71 包，寄存器 0x64，电量 88%
+    pkt = b"\x55\x71" + struct.pack("<H", 0x64) + struct.pack("<h", 88) + b"\x00" * 14
+    assert parse_battery_packet(pkt) == 88
+
+    parser = PacketParser()
+    parser.feed(pkt)
+    assert parser.battery == 88

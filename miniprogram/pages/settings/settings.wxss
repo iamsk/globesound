@@ -129,3 +129,101 @@
   color: var(--color-muted);
   line-height: 1.5;
 }
+
+/* ===== 坐标卡片 ===== */
+.coord-card {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.coord-val-wrap {
+  padding: 10rpx 0 20rpx;
+  text-align: center;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8rpx;
+}
+
+.coord-val {
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: 52rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  color: #ffb547;
+}
+
+/* ===== 电量数值显示 ===== */
+.battery-val {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.battery-val.good {
+  color: #68d391;
+  background: rgba(72, 187, 120, 0.12);
+}
+
+.battery-val.medium {
+  color: #f6ad55;
+  background: rgba(246, 173, 85, 0.12);
+}
+
+.battery-val.low {
+  color: #fc8181;
+  background: rgba(245, 101, 101, 0.15);
+}
+
+.bat-icon {
+  font-size: 24rpx;
+}
+
+.bat-text {
+  font-size: 26rpx;
+}
+
+/* ===== 读数历史列表 ===== */
+.fix-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.04);
+}
+
+.fix-item:last-child {
+  border-bottom: none;
+}
+
+.fix-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.fix-index {
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.35);
+  font-family: 'Menlo', 'Courier New', monospace;
+  min-width: 44rpx;
+}
+
+.fix-coord {
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: 28rpx;
+  color: rgba(232, 232, 236, 0.85);
+}
+
+.fix-time {
+  font-size: 22rpx;
+  color: rgba(232, 232, 236, 0.4);
+  font-family: 'Menlo', 'Courier New', monospace;
+}
+
+.empty-fixes {
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 24rpx;
+  color: rgba(232, 232, 236, 0.35);
+}

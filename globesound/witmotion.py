@@ -18,9 +18,13 @@ import numpy as np
 SERVICE_UUID = "0000ffe5-0000-1000-8000-00805f9a34fb"
 NOTIFY_UUID = "0000ffe4-0000-1000-8000-00805f9a34fb"
 WRITE_UUID = "0000ffe9-0000-1000-8000-00805f9a34fb"
+BATTERY_CHAR_UUID = "00002a19-0000-1000-8000-00805f9b34fb"  # 标准 BLE 电池服务特征值
 
 HEADER = b"\x55\x61"
+HEADER_REG = b"\x55\x71"
 PACKET_LEN = 20
+
+CMD_READ_BATTERY = b"\xff\xaa\x27\x64\x00"  # 读取 0x64 (BatPer) 电量寄存器指令
 
 ACC_RANGE_G = 16.0
 GYRO_RANGE_DPS = 2000.0
@@ -32,6 +36,24 @@ class Packet:
     acc: np.ndarray    # 加速度，单位 g（静止时指向"正上方"，模长约 1）
     gyro: np.ndarray   # 角速度，单位 °/s
     angle: np.ndarray  # 模块自带的欧拉角 roll/pitch/yaw，单位 °（本项目不使用）
+
+
+def parse_battery_packet(pkt: bytes) -> int | None:
+    """解析 0x55 0x71 寄存器读取应答包，提取电量百分比 (0-100)。"""
+    if len(pkt) < 6 or pkt[:2] != HEADER_REG:
+        return None
+    start_reg = struct.unpack("<H", pkt[2:4])[0]
+    if start_reg == 0x64:
+        raw_val = struct.unpack("<h", pkt[4:6])[0]
+        if 0 <= raw_val <= 100:
+            return raw_val
+        if 100 < raw_val <= 500:  # 0.01V，例如 395 = 3.95V
+            pct = (raw_val - 345) / (415 - 345) * 100.0
+            return max(0, min(100, round(pct)))
+        if 1000 <= raw_val <= 5000:  # mV，例如 3950 = 3950mV
+            pct = (raw_val - 3450) / (4150 - 3450) * 100.0
+            return max(0, min(100, round(pct)))
+    return None
 
 
 def parse_packet(pkt: bytes) -> Packet:
@@ -58,24 +80,38 @@ def build_packet(acc, gyro=(0.0, 0.0, 0.0), angle=(0.0, 0.0, 0.0)) -> bytes:
 
 
 class PacketParser:
-    """把 BLE 通知里任意切分的字节流还原成完整数据包。"""
+    """把 BLE 通知里任意切分的字节流还原成完整数据包，同时自动捕获 0x55 0x71 电量包。"""
 
     def __init__(self) -> None:
         self._buf = bytearray()
+        self.battery: int | None = None
 
     def feed(self, data: bytes) -> list[Packet]:
         self._buf += data
         packets: list[Packet] = []
         while True:
-            i = self._buf.find(HEADER)
-            if i < 0:
+            i_att = self._buf.find(HEADER)
+            i_reg = self._buf.find(HEADER_REG)
+
+            if i_att < 0 and i_reg < 0:
                 del self._buf[:-1]  # 留最后一个字节，它可能是半个包头
                 break
-            del self._buf[:i]
-            if len(self._buf) < PACKET_LEN:
-                break
-            packets.append(parse_packet(bytes(self._buf[:PACKET_LEN])))
-            del self._buf[:PACKET_LEN]
+
+            # 优先处理出现更早的包头
+            if i_att >= 0 and (i_reg < 0 or i_att <= i_reg):
+                del self._buf[:i_att]
+                if len(self._buf) < PACKET_LEN:
+                    break
+                packets.append(parse_packet(bytes(self._buf[:PACKET_LEN])))
+                del self._buf[:PACKET_LEN]
+            else:
+                del self._buf[:i_reg]
+                if len(self._buf) < PACKET_LEN:
+                    break
+                bat = parse_battery_packet(bytes(self._buf[:PACKET_LEN]))
+                if bat is not None:
+                    self.battery = bat
+                del self._buf[:PACKET_LEN]
         return packets
 
 

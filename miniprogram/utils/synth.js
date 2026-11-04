@@ -159,9 +159,11 @@ const SOUND_GENERATORS = {
 class SoundSynth {
   constructor() {
     this.fs = null
-    this.fileCache = {}
     this.player = null
     this.webCtx = null
+    this._lastZoneId = null
+    this._currentFallbackSfx = null
+    this._onAudioEndCallback = null
     this._init()
   }
 
@@ -189,21 +191,7 @@ class SoundSynth {
       console.warn('[SoundSynth] FileSystemManager 不可用:', e)
     }
 
-    // 3. 初始化 InnerAudioContext 专用音效播放器
-    try {
-      if (wx.createInnerAudioContext) {
-        this.player = wx.createInnerAudioContext()
-        this.player.obeyMuteSwitch = false
-        this.player.autoplay = false
-        this.player.onError(err => {
-          console.warn('[SoundSynth] InnerAudio 播放失败:', err)
-        })
-      }
-    } catch (e) {
-      console.warn('[SoundSynth] InnerAudioContext 不可用:', e)
-    }
-
-    // 4. 尝试初始化 WebAudioContext 作为备用
+    // 3. 初始化 WebAudioContext（底层内存解码与纯音合成器，零域名白名单依赖）
     try {
       if (wx.createWebAudioContext) {
         this.webCtx = wx.createWebAudioContext()
@@ -211,35 +199,88 @@ class SoundSynth {
     } catch (e) {
       // ignore
     }
+
+    // 4. 初始化 InnerAudioContext
+    this._ensurePlayer()
   }
 
-  /**
-   * 获取或即时生成本地 WAV 音频路径
-   */
-  _getAudioFilePath(key) {
-    if (!this.fs || !wx.env || !wx.env.USER_DATA_PATH) return null
-    if (this.fileCache[key]) return this.fileCache[key]
-
-    const gen = SOUND_GENERATORS[key] || SOUND_GENERATORS.cheer
-    const buffer = gen()
-    const filePath = `${wx.env.USER_DATA_PATH}/sfx_${key}.wav`
+  _ensurePlayer() {
+    if (this.player) return this.player
+    if (typeof wx === 'undefined' || !wx.createInnerAudioContext) return null
 
     try {
-      this.fs.writeFileSync(filePath, buffer)
-      this.fileCache[key] = filePath
-      return filePath
-    } catch (err) {
-      console.warn(`[SoundSynth] 写入本地音效缓存失败 (${key}):`, err)
+      // 必须使用原生标准的 InnerAudioContext，避免 useWebAudioImplement 导致 iOS 格式解码失败或静音开关冲突
+      const p = wx.createInnerAudioContext()
+      p.obeyMuteSwitch = false
+      p.autoplay = false
+
+      p.onError(err => {
+        console.warn('[SoundSynth] InnerAudio 播放失败, 尝试路径备用与降级 WebAudio 内存解码:', err)
+        const zoneId = this._lastZoneId
+        const fallback = this._currentFallbackSfx
+        this._currentFallbackSfx = null
+
+        // 尝试切换路径形式重试
+        if (zoneId && p.src) {
+          if (!p.src.startsWith('/') && !p._hasTriedSlash) {
+            p._hasTriedSlash = true
+            p.src = `/audio/kids/${zoneId}.mp3`
+            p.play()
+            return
+          }
+        }
+
+        // 降级 WebAudio 二进制解码播放
+        if (zoneId) {
+          this._playByWebAudioDecode(zoneId, fallback)
+        } else if (fallback) {
+          this.playByKey(fallback)
+        }
+      })
+
+      p.onPlay(() => {
+        this._currentFallbackSfx = null
+      })
+
+      p.onEnded(() => {
+        if (typeof this._onAudioEndCallback === 'function') {
+          this._onAudioEndCallback()
+        }
+      })
+
+      this.player = p
+      return this.player
+    } catch (e) {
+      console.warn('[SoundSynth] InnerAudioContext 不可用:', e)
       return null
+    }
+  }
+
+  setOnAudioEnd(cb) {
+    this._onAudioEndCallback = cb
+  }
+
+  stop() {
+    if (this.player) {
+      try {
+        this.player.stop()
+      } catch (e) {}
+    }
+    if (typeof this._onAudioEndCallback === 'function') {
+      this._onAudioEndCallback()
     }
   }
 
   /**
    * 播放生态大区的超高品质 edge-tts 故事语音 (zh-CN-XiaoxiaoNeural)
-   * 真实人声绘本级播报，彻底告别单调假音！
-   * @param {string} zoneId - 例如 sichuan_panda, australia_kangaroo 等
+   * 采用纯内存与小程序项目资产路径，完全不请求任何外部网络，零白名单限制！
+   * 
+   * 三重容灾流：
+   * 1. 首选：InnerAudioContext 播放项目内标准相对路径 audio/kids/${zoneId}.mp3
+   * 2. 备用：WebAudioContext.decodeAudioData 直接从代码包二进制 ArrayBuffer 内存硬解播放
+   * 3. 兜底：客户端即时合成 PCM WAV 动作拟音（竹子咀嚼/小马奔跑/海浪）
    */
-  playZoneAudio(zoneId) {
+  playZoneAudio(zoneId, fallbackSfx = 'cheer') {
     if (!zoneId) return
 
     try {
@@ -248,32 +289,86 @@ class SoundSynth {
       }
     } catch (e) {}
 
-    const audioPath = `/audio/kids/${zoneId}.mp3`
-    if (!this.player) {
-      try {
-        this.player = wx.createInnerAudioContext()
-        this.player.obeyMuteSwitch = false
-      } catch (e) {}
-    }
+    this._lastZoneId = zoneId
+    this._currentFallbackSfx = fallbackSfx
 
-    if (this.player) {
+    // 方案一：优先通过原生 InnerAudioContext 播放
+    const player = this._ensurePlayer()
+    if (player) {
       try {
-        this.player.stop()
-        this.player.src = audioPath
-        this.player.play()
-        console.log(`[SoundSynth] ✓ 正在播放 edge-tts 语音: ${audioPath}`)
+        player.stop()
+        player._hasTriedSlash = false
+        player.src = `audio/kids/${zoneId}.mp3`
+        player.play()
+        console.log(`[SoundSynth] ✓ 正在通过 InnerAudio 播放故事语音: audio/kids/${zoneId}.mp3`)
         return
       } catch (err) {
-        console.warn('[SoundSynth] 播放 edge-tts MP3 异常，降级使用拟音:', err)
+        console.warn('[SoundSynth] InnerAudio 同步播放异常, 切换 WebAudio decode:', err)
       }
     }
 
-    // 备用兜底
-    this.playByKey('cheer')
+    // 方案二：备用原生 WebAudio 二进制解码播放（100% 内存直读，彻底脱离 URL 与白名单）
+    this._playByWebAudioDecode(zoneId, fallbackSfx)
+  }
+
+  /**
+   * 通过 WebAudioContext 直接将代码包内二进制 MP3 解码并播放
+   * 绝对不发起任何网络请求，不经过任何 URL 协议，零域名白名单依赖
+   */
+  _playByWebAudioDecode(zoneId, fallbackSfx = 'cheer') {
+    if (!this.webCtx || !this.fs) {
+      this.playByKey(fallbackSfx)
+      return
+    }
+
+    try {
+      if (this.webCtx.state === 'suspended') {
+        this.webCtx.resume()
+      }
+    } catch (e) {}
+
+    const candidatePaths = [
+      `audio/kids/${zoneId}.mp3`,
+      `/audio/kids/${zoneId}.mp3`
+    ]
+    let buf = null
+    for (const p of candidatePaths) {
+      try {
+        buf = this.fs.readFileSync(p)
+        if (buf && (buf.byteLength > 0 || buf.length > 0)) break
+      } catch (e) {}
+    }
+
+    if (!buf) {
+      console.warn(`[SoundSynth] 代码包内未读取到 MP3: ${zoneId}，降级拟音`)
+      this.playByKey(fallbackSfx)
+      return
+    }
+
+    try {
+      this.webCtx.decodeAudioData(
+        buf,
+        (audioBuffer) => {
+          const src = this.webCtx.createBufferSource()
+          src.buffer = audioBuffer
+          src.connect(this.webCtx.destination)
+          src.start(0)
+          console.log(`[SoundSynth] ✓ WebAudioContext 原生内存解码播放成功: ${zoneId}`)
+        },
+        (err) => {
+          console.warn('[SoundSynth] WebAudio decode 失败，降级拟音:', err)
+          this.playByKey(fallbackSfx)
+        }
+      )
+    } catch (err) {
+      console.warn('[SoundSynth] decodeAudioData 调用异常:', err)
+      this.playByKey(fallbackSfx)
+    }
   }
 
   /**
    * 按动作标识播放对应音效
+   * 纯内存即时解码播放，彻底杜绝写入临时文件与 http:// 域名拦截
    * @param {string} key - cheer | boing | munch | gallop | bell | wave | roar
    */
   playByKey(key = 'cheer') {
@@ -290,47 +385,52 @@ class SoundSynth {
       }
     } catch (e) {}
 
-    // 尝试方式一：原生 InnerAudioContext 播放本地 PCM WAV
-    const filePath = this._getAudioFilePath(key)
-    if (filePath && this.player) {
-      try {
-        this.player.stop()
-        this.player.src = filePath
-        this.player.play()
-        console.log(`[SoundSynth] ✓ 已播放 WAV 音效: ${key} (${filePath})`)
-        return
-      } catch (err) {
-        console.warn('[SoundSynth] 原生播放器调用异常，尝试 WebAudio 备用:', err)
-      }
-    }
-
-    // 尝试方式二：WebAudioContext 备用发生器
+    // 优先使用 WebAudioContext 在纯内存中即时解码播放（零文件写入，零白名单）
     if (this.webCtx) {
       try {
         if (this.webCtx.state === 'suspended') {
-          this.webCtx.resume().then(() => this._playWebAudio(key))
-        } else {
-          this._playWebAudio(key)
+          this.webCtx.resume()
         }
+        const gen = SOUND_GENERATORS[key] || SOUND_GENERATORS.cheer
+        const wavBuf = gen()
+        this.webCtx.decodeAudioData(
+          wavBuf,
+          (audioBuffer) => {
+            const src = this.webCtx.createBufferSource()
+            src.buffer = audioBuffer
+            src.connect(this.webCtx.destination)
+            src.start(0)
+            console.log(`[SoundSynth] ✓ WebAudio 已播放内存合成拟音: ${key}`)
+          },
+          () => {
+            this._playOscillator(key)
+          }
+        )
+        return
       } catch (e) {
-        console.warn('[SoundSynth] WebAudio 备用播放失败:', e)
+        console.warn('[SoundSynth] WebAudio 内存解码失败:', e)
       }
     }
+
+    // 终极备用：振荡器合成
+    this._playOscillator(key)
   }
 
-  _playWebAudio(key) {
+  _playOscillator(key) {
     if (!this.webCtx) return
-    const now = this.webCtx.currentTime
-    const osc = this.webCtx.createOscillator()
-    const gain = this.webCtx.createGain()
-    osc.type = 'triangle'
-    osc.frequency.setValueAtTime(440, now)
-    gain.gain.setValueAtTime(0.3, now)
-    gain.gain.linearRampToValueAtTime(0.001, now + 0.35)
-    osc.connect(gain)
-    gain.connect(this.webCtx.destination)
-    osc.start(now)
-    osc.stop(now + 0.35)
+    try {
+      const now = this.webCtx.currentTime
+      const osc = this.webCtx.createOscillator()
+      const gain = this.webCtx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(440, now)
+      gain.gain.setValueAtTime(0.3, now)
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.35)
+      osc.connect(gain)
+      gain.connect(this.webCtx.destination)
+      osc.start(now)
+      osc.stop(now + 0.35)
+    } catch (e) {}
   }
 
   // 快捷方法

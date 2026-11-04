@@ -64,17 +64,23 @@ Page({
     lat: 30.57,
     lon: 104.06,
 
-    // 地图设置
+    // 地图设置 (scale 默认 3：宏观视野展现全局地理大环境，支持缩放控制)
     mapLat: 30.57,
     mapLon: 104.06,
-    scale: 4,
+    scale: 3,
     allMarkers: [],
     following: true,
     satelliteOn: true,
 
+    // 传感器电量
+    batteryLevel: null,
+    batteryClass: '',
+    batteryIcon: '🔋',
+
     // ===== 萌宝乐园数据 =====
     currentKidsZone: null,
     kidsCandidates: [],
+    kidsSpeaking: false,
 
     // ===== 电台模式数据 =====
     stations: [],
@@ -113,6 +119,9 @@ Page({
 
     // 初始化音频与合成器
     this._initAudio()
+    synth.setOnAudioEnd(() => {
+      this.setData({ kidsSpeaking: false })
+    })
 
     // 加载萌宝乐园数据
     this.loadKidsZones()
@@ -143,6 +152,10 @@ Page({
     if (this.ble && this._onConnBound) {
       this.ble.removeConnectionListener(this._onConnBound)
     }
+    if (this.ble && this._onBatteryBound) {
+      this.ble.removeBatteryListener(this._onBatteryBound)
+    }
+    synth.stop()
     this._destroyAudio()
   },
 
@@ -162,42 +175,64 @@ Page({
 
       // 立即对准当前位置的萌宝
       const v = this.targetVec || latlonToVec(this.data.lat, this.data.lon)
+      this.targetVec = v
       const { best } = this.matchKidsZone(v)
       if (best) {
         this.lockKidsZone(best, true)
       }
     } else {
-      // 切换到电台模式
-      if (this.targetVec) {
-        this.lockAt(this.targetVec)
-      } else {
-        this.setData({
-          allMarkers: this.buildMarkers(this.data.lat, this.data.lon, this.data.statusClass)
-        })
-      }
+      // 切换到电台模式：暂停萌宝语音
+      synth.stop()
+      this.setData({ kidsSpeaking: false })
+      if (this._kidsSpeakingTimer) clearTimeout(this._kidsSpeakingTimer)
+
+      // 切换到电台模式：立即锁定当前坐标最近电台
+      const v = this.targetVec || latlonToVec(this.data.lat, this.data.lon)
+      this.targetVec = v
+      this.lockAt(v)
+      this.setData({
+        allMarkers: this.buildMarkers(this.data.lat, this.data.lon, this.data.statusClass)
+      })
     }
   },
 
   // ===== 萌宝乐园核心逻辑 =====
 
   loadKidsZones() {
+    let kidsList = null
     try {
-      const kidsList = require('../../data/kids_zones.json')
-      this.kidsZones = kidsList.map(z => ({
-        ...z,
-        v: latlonToVec(z.lat, z.lon)
-      }))
-
-      // 默认选中第一只萌友 (大熊猫)
-      const defaultZone = this.kidsZones[0]
-      this.setData({
-        currentKidsZone: defaultZone,
-        kidsCandidates: this.kidsZones.slice(0, 4),
-        allMarkers: this.buildMarkers(defaultZone.lat, defaultZone.lon, 'still')
-      })
-    } catch (e) {
-      console.warn('加载萌宝数据失败:', e)
+      kidsList = require('../../data/kids_zones.js')
+    } catch (e1) {
+      try {
+        kidsList = require('../../data/kids_zones.json')
+      } catch (e2) {
+        try {
+          const fs = wx.getFileSystemManager()
+          const content = fs.readFileSync('data/kids_zones.json', 'utf8')
+          kidsList = JSON.parse(content)
+        } catch (e3) {
+          console.error('[Index] 加载萌宝数据失败:', e1, e2, e3)
+        }
+      }
     }
+
+    if (!Array.isArray(kidsList) || kidsList.length === 0) {
+      console.error('[Index] 萌宝数据列表为空!')
+      return
+    }
+
+    this.kidsZones = kidsList.map(z => ({
+      ...z,
+      v: latlonToVec(z.lat, z.lon)
+    }))
+
+    // 默认选中第一只萌友 (大熊猫)
+    const defaultZone = this.kidsZones[0]
+    this.setData({
+      currentKidsZone: defaultZone,
+      kidsCandidates: this.kidsZones.slice(0, 4),
+      allMarkers: this.buildMarkers(defaultZone.lat, defaultZone.lon, 'still')
+    })
   },
 
   /**
@@ -229,6 +264,12 @@ Page({
   lockKidsZone(zone, playSound = true) {
     if (!zone) return
 
+    // 萌宝讲述时先暂停电台音乐
+    if (this.audio) {
+      this.audio.pause()
+      this.setData({ isPlaying: false })
+    }
+
     const v = latlonToVec(zone.lat, zone.lon)
     const { candidates } = this.matchKidsZone(this.targetVec || v)
 
@@ -239,8 +280,15 @@ Page({
     })
 
     if (playSound) {
+      // 触发讲述动画
+      this.setData({ kidsSpeaking: true })
+      if (this._kidsSpeakingTimer) clearTimeout(this._kidsSpeakingTimer)
+      this._kidsSpeakingTimer = setTimeout(() => {
+        this.setData({ kidsSpeaking: false })
+      }, 5500)
+
       // 播放超高品质 edge-tts 故事语音
-      synth.playZoneAudio(zone.id)
+      synth.playZoneAudio(zone.id, zone.sfx || 'cheer')
       try {
         wx.vibrateShort({ type: 'medium' })
       } catch (e) {
@@ -250,11 +298,24 @@ Page({
   },
 
   onKidsPlaySound() {
-    const cur = this.data.currentKidsZone
+    const cur = this.data.currentKidsZone || (this.kidsZones && this.kidsZones[0])
     if (!cur) return
 
-    // 播放该生态区的真人故事讲解
-    synth.playZoneAudio(cur.id)
+    // 暂停电台音乐
+    if (this.audio) {
+      this.audio.pause()
+      this.setData({ isPlaying: false })
+    }
+
+    // 播放状态动画反馈
+    this.setData({ kidsSpeaking: true })
+    if (this._kidsSpeakingTimer) clearTimeout(this._kidsSpeakingTimer)
+    this._kidsSpeakingTimer = setTimeout(() => {
+      this.setData({ kidsSpeaking: false })
+    }, 5500)
+
+    // 播放该生态区的真人故事讲解及音效（双重容灾）
+    synth.playZoneAudio(cur.id, cur.sfx || 'cheer')
     try {
       wx.vibrateShort({ type: 'medium' })
     } catch (e) {
@@ -262,9 +323,9 @@ Page({
     }
 
     wx.showToast({
-      title: cur.action || '嗷呜~',
+      title: cur.action || cur.talk || '嗷呜~',
       icon: 'none',
-      duration: 1500
+      duration: 2000
     })
   },
 
@@ -285,13 +346,53 @@ Page({
 
     this._onPacketBound = (pkt) => this.onBlePacket(pkt)
     this._onConnBound = (connected) => this.onBleConnectionChange(connected)
+    this._onBatteryBound = (bat) => this.updateBattery(bat)
 
     this.ble.addPacketListener(this._onPacketBound)
     this.ble.addConnectionListener(this._onConnBound)
+    this.ble.addBatteryListener(this._onBatteryBound)
+
+    if (this.ble.battery !== null) {
+      this.updateBattery(this.ble.battery)
+    }
 
     this.setData({
       bleConnected: this.ble.connected
     })
+  },
+
+  updateBattery(pct) {
+    if (pct === null || pct === undefined || isNaN(pct)) {
+      this.setData({ batteryLevel: null })
+      app.globalData.batteryLevel = null
+      return
+    }
+    const p = Math.max(0, Math.min(100, Math.round(pct)))
+    let cls = 'good'
+    let icon = '🔋'
+    if (p < 20) {
+      cls = 'low'
+      icon = '🪫'
+    } else if (p < 50) {
+      cls = 'medium'
+      icon = '🔋'
+    }
+    this.setData({
+      batteryLevel: p,
+      batteryClass: cls,
+      batteryIcon: icon
+    })
+    app.globalData.batteryLevel = p
+  },
+
+  onZoomIn() {
+    const next = Math.min(18, this.data.scale + 1)
+    this.setData({ scale: next })
+  },
+
+  onZoomOut() {
+    const next = Math.max(3, this.data.scale - 1)
+    this.setData({ scale: next })
   },
 
   _syncCalibration() {
@@ -403,7 +504,9 @@ Page({
       statusClass: connected ? 'moving' : '',
       sourceText: connected ? '传感器已就绪' : '蓝牙连接已断开'
     })
+    app.globalData.sourceText = connected ? '传感器已就绪' : '蓝牙连接已断开'
     if (!connected) {
+      this.updateBattery(null)
       this.liveVec = null
       this.targetVec = null
       this.detector.reset()
@@ -510,6 +613,9 @@ Page({
       update.mapLon = lon
     }
 
+    app.globalData.coordText = coordText
+    app.globalData.sourceText = update.sourceText
+
     update.allMarkers = this.buildMarkers(lat, lon, 'still')
     this.setData(update)
   },
@@ -537,6 +643,9 @@ Page({
       update.mapLon = lon
     }
 
+    app.globalData.coordText = coordText
+    app.globalData.sourceText = update.sourceText
+
     update.allMarkers = this.buildMarkers(lat, lon, 'moving')
     this.setData(update)
   },
@@ -554,6 +663,7 @@ Page({
     ].slice(0, MAX_FIXES)
 
     this.setData({ fixes: newFixes })
+    app.globalData.fixes = newFixes
   },
 
   buildMarkers(lat, lon, state) {
@@ -620,12 +730,12 @@ Page({
           id: 2,
           latitude: cur.lat,
           longitude: cur.lon,
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           iconPath: '/images/marker-play.png',
           anchor: { x: 0.5, y: 0.5 },
           callout: {
-            content: cur.name,
+            content: `📻 ${cur.name}`,
             color: '#ff6b4a',
             bgColor: '#0e121c',
             borderRadius: 6,
@@ -633,7 +743,7 @@ Page({
             borderWidth: 1,
             padding: 4,
             fontSize: 11,
-            display: 'BYCLICK'
+            display: 'ALWAYS'
           }
         })
       }
@@ -647,16 +757,26 @@ Page({
   loadStations() {
     let list = []
     try {
-      list = require('../../data/stations.json')
-    } catch (e) {
+      list = require('../../data/stations.js')
+    } catch (e1) {
       try {
-        list = require('../../data/stations_extra.json')
+        list = require('../../data/stations.json')
       } catch (e2) {
-        console.warn('加载本地电台失败:', e2)
+        try {
+          list = require('../../data/stations_extra.js')
+        } catch (e3) {
+          try {
+            const fs = wx.getFileSystemManager()
+            const str = fs.readFileSync('data/stations.json', 'utf8')
+            list = JSON.parse(str)
+          } catch (e4) {
+            console.error('[Index] 加载本地电台失败:', e1, e2, e3, e4)
+          }
+        }
       }
     }
 
-    this.allStations = list.map(s => ({
+    this.allStations = (Array.isArray(list) ? list : []).map(s => ({
       ...s,
       v: latlonToVec(s.lat, s.lon)
     }))
@@ -666,6 +786,11 @@ Page({
     this.setData({
       kickerText: `${this.allStations.length} 个电台已就绪`
     })
+
+    // 预热/初始化当前坐标对应的电台
+    const v = this.targetVec || latlonToVec(this.data.lat, this.data.lon)
+    this.targetVec = v
+    this.lockAt(v)
 
     this.fetchOnlineStations()
   },
@@ -679,6 +804,7 @@ Page({
         if (res.statusCode === 200 && Array.isArray(res.data)) {
           const online = res.data
             .filter(s => s.geo_lat != null && s.geo_long != null && (s.url_resolved || s.url))
+            .filter(s => !((s.url_resolved || s.url || '').includes('qtfm.cn')))
             .map(s => {
               const lat = parseFloat(s.geo_lat)
               const lon = parseFloat(s.geo_long)
@@ -752,55 +878,74 @@ Page({
       : this.allStations.filter(s => s.genre === g)
 
     this.visibleStations = visible
-    this.setData({
-      visibleStations: visible
-    })
+    // 严禁在此 setData visibleStations，避免 1600+ 个对象阻塞小程序 IPC 渲染通道
   },
 
   onGenreFilter(e) {
     const g = e.currentTarget.dataset.genre
     this.setData({ currentGenre: g })
     this.applyGenreFilter()
-    if (this.lastStill && this.targetVec) {
-      this.lockAt(this.targetVec)
-    }
+    const v = this.targetVec || latlonToVec(this.data.lat, this.data.lon)
+    this.lockAt(v)
   },
 
+  /**
+   * 自适应分级电台聚合检索算法：
+   * 1. 计算与各电台球面角距离，提取全球最近电台；
+   * 2. 分级磁吸：城市周边（<=5°）同城聚合，远洋/荒漠（>5°）按角距离动态聚合；
+   * 3. 永不落空，杜绝"这里附近没有找到电台"。
+   */
   groupAt(v) {
     if (!v || !this.visibleStations || this.visibleStations.length === 0) return []
 
-    let maxDot = -2
+    let bestStation = null
+    let minDeg = Infinity
+
     for (const s of this.visibleStations) {
       const d = dot(s.v, v)
-      if (d > maxDot) {
-        maxDot = d
+      const deg = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI
+      if (deg < minDeg) {
+        minDeg = deg
+        bestStation = s
       }
     }
 
-    if (maxDot < -1) return []
+    if (!bestStation) return []
 
-    const distRad = Math.acos(Math.max(-1, Math.min(1, maxDot)))
-    const distDegVal = distRad * 180 / Math.PI
-    if (distDegVal > LOCK_DEG) return []
+    let searchRadiusKm = CITY_KM
+    if (minDeg > 5.0) {
+      searchRadiusKm = Math.max(CITY_KM, minDeg * 111.0 * 0.4)
+    }
 
-    const best = this.visibleStations.find(s => dot(s.v, v) === maxDot)
-    if (!best) return []
-
-    const cosCity = Math.cos(CITY_KM / 6371.0)
-    const group = this.visibleStations
-      .filter(s => dot(s.v, best.v) >= cosCity)
+    const cosGroup = Math.cos(searchRadiusKm / 6371.0)
+    let group = this.visibleStations
+      .filter(s => dot(s.v, bestStation.v) >= cosGroup)
       .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+
+    if (group.length === 0) {
+      group = [bestStation]
+    }
+
+    const distKm = Math.round(minDeg * 111.19)
+    group.forEach(s => {
+      s.distKm = distKm
+      s.distDeg = minDeg
+    })
 
     return group
   },
 
   lockAt(v) {
+    if (!v) {
+      v = latlonToVec(this.data.lat, this.data.lon)
+      this.targetVec = v
+    }
     const g = this.groupAt(v)
     if (!g.length) {
       this.setData({
-        stationName: '这里附近没有找到电台',
-        stationMeta: `3° 范围内无 ${this.data.currentGenre === '全部' ? '' : this.data.currentGenre} 电台`,
-        kickerText: '换个地点或换个曲风试试',
+        stationName: '正在定位电台…',
+        stationMeta: '转动地球仪即可自动搜索全球电台',
+        kickerText: '准备就绪',
         kickerClass: '',
         group: [],
         groupCountText: ''
@@ -811,12 +956,15 @@ Page({
     const cur = this.data.currentStation
     if (cur && g.some(s => s.url === cur.url)) {
       const idx = g.findIndex(s => s.url === cur.url)
+      const target = g[idx]
+      const distInfo = target.distKm && target.distKm > 50 ? `距读数点约 ${target.distKm}km` : ''
       this.setData({
         group: g,
         groupIdx: idx,
-        groupCountText: g.length > 1 ? `同城 ${idx + 1} / ${g.length}` : '附近只有这一个',
-        kickerText: '已锁定',
-        kickerClass: 'locked'
+        groupCountText: g.length > 1 ? `同城 ${idx + 1} / ${g.length}` : (distInfo || '附近只有这一个'),
+        kickerText: distInfo ? `已锁定 (${target.distKm}km)` : '已锁定',
+        kickerClass: 'locked',
+        allMarkers: this.buildMarkers(this.data.lat, this.data.lon, this.data.statusClass)
       })
       return
     }
@@ -832,8 +980,10 @@ Page({
   previewAt(v) {
     const g = this.groupAt(v)
     if (g.length > 0) {
+      const top = g[0]
+      const distHint = top.distKm > 100 ? ` (${top.distKm}km)` : ''
       this.setData({
-        kickerText: `预览 · ${g[0].genre}`,
+        kickerText: `预览 · ${top.name || top.genre}${distHint}`,
         kickerClass: ''
       })
     }
@@ -925,10 +1075,12 @@ Page({
     const idx = (index + group.length) % group.length
     const cur = group[idx]
 
+    const distHint = cur.distKm && cur.distKm > 50 ? `距读数点约 ${cur.distKm}km` : ''
     const metaParts = [
       cur.country,
       cur.genre,
       cur.lang,
+      distHint,
       cur.bitrate ? `${cur.bitrate} kbps` : '',
       cur.codec
     ].filter(Boolean).join(' · ')
@@ -938,13 +1090,13 @@ Page({
       currentStation: cur,
       stationName: cur.name,
       stationMeta: metaParts || '网络电台',
-      groupCountText: group.length > 1 ? `同城 ${idx + 1} / ${group.length}` : '附近只有这一个',
+      groupCountText: group.length > 1 ? `同城 ${idx + 1} / ${group.length}` : (distHint || '附近只有这一个'),
       allMarkers: this.buildMarkers(this.data.lat, this.data.lon, this.data.statusClass)
     })
 
     if (!this.data.audioUnlocked) {
       this.setData({
-        kickerText: '已锁定 · 点击下方开始收听',
+        kickerText: distHint ? `已锁定 (${cur.distKm}km) · 点击下方开始收听` : '已锁定 · 点击下方开始收听',
         kickerClass: 'locked'
       })
       return
@@ -973,10 +1125,15 @@ Page({
     this.setData({ audioUnlocked: true })
     if (this.data.currentStation) {
       this.playStation(this.data.groupIdx)
-    } else if (this.data.group.length > 0) {
-      this.playStation(0)
     } else {
-      wx.showToast({ title: '转动地球仪定位电台', icon: 'none' })
+      const v = this.targetVec || latlonToVec(this.data.lat, this.data.lon)
+      this.targetVec = v
+      this.lockAt(v)
+      if (this.data.group && this.data.group.length > 0) {
+        this.playStation(0)
+      } else {
+        wx.showToast({ title: '转动地球仪定位电台', icon: 'none' })
+      }
     }
   },
 

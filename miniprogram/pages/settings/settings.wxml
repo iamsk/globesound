@@ -1,9 +1,33 @@
 <!--
   globesound 设置页
+  包含：当前坐标与数据来源、蓝牙传感器与电量、姿态标定、最近读数历史、电台说明
 -->
 <view class="page">
 
-  <!-- ========== 蓝牙传感器 ========== -->
+  <!-- ========== 1. 当前读数与定位 ========== -->
+  <view class="section">
+    <text class="section-title">当前定位与读数</text>
+    <view class="card coord-card">
+      <view class="coord-val-wrap">
+        <text class="coord-val">{{coordText}}</text>
+      </view>
+      <view class="item">
+        <text class="label">数据来源</text>
+        <text class="value text-muted">{{sourceText}}</text>
+      </view>
+      <view class="item">
+        <text class="label">定位机制</text>
+        <text class="value">重力矢天顶正下方对准点</text>
+      </view>
+      <view class="card-btn-row" wx:if="{{isCalibrated}}">
+        <button class="btn btn-outline full-width" bindtap="onGoCalibrate">
+          重新标定当前地球仪
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 2. 蓝牙传感器 ========== -->
   <view class="section">
     <text class="section-title">蓝牙姿态传感器</text>
     <view class="card">
@@ -12,6 +36,13 @@
         <view class="value-row">
           <view class="status-dot {{bleConnected ? 'connected' : 'disconnected'}}"></view>
           <text class="value">{{bleConnected ? '已连接' : '未连接'}}</text>
+        </view>
+      </view>
+      <view class="item" wx:if="{{bleConnected && batteryLevel !== null}}">
+        <text class="label">剩余电量</text>
+        <view class="battery-val {{batteryClass}}">
+          <text class="bat-icon">{{batteryIcon}}</text>
+          <text class="bat-text text-mono">{{batteryLevel}}%</text>
         </view>
       </view>
       <view class="item" wx:if="{{bleConnected && deviceName}}">
@@ -38,7 +69,7 @@
     </view>
   </view>
 
-  <!-- ========== 地球仪标定 ========== -->
+  <!-- ========== 3. 姿态标定 ========== -->
   <view class="section">
     <text class="section-title">姿态标定</text>
     <view class="card">
@@ -71,30 +102,49 @@
     </view>
   </view>
 
-  <!-- ========== 电台目录 ========== -->
+  <!-- ========== 4. 最近读数历史 ========== -->
+  <view class="section">
+    <text class="section-title">最近读数历史</text>
+    <view class="card">
+      <block wx:if="{{fixes && fixes.length > 0}}">
+        <view class="fix-item" wx:for="{{fixes}}" wx:key="ts">
+          <view class="fix-left">
+            <text class="fix-index">#{{index + 1}}</text>
+            <text class="fix-coord">{{item.coordText}}</text>
+          </view>
+          <text class="fix-time">{{item.timeText}}</text>
+        </view>
+      </block>
+      <view class="empty-fixes" wx:else>
+        <text>暂无读数历史，转动地球仪停稳后将自动记录</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 5. 电台目录 ========== -->
   <view class="section">
     <text class="section-title">电台与网络</text>
     <view class="card">
       <view class="item">
         <text class="label">电台库容量</text>
-        <text class="value text-mono text-live">1,600+ 全球电台</text>
+        <text class="value text-mono text-live">1,500+ 全球电台</text>
       </view>
       <view class="item">
         <text class="label">国内覆盖</text>
-        <text class="value">全国 34 个省市直辖市及港澳台</text>
+        <text class="value">央广CNR/全国各省市直辖市及港澳台</text>
       </view>
       <view class="item">
         <text class="label">数据源</text>
-        <text class="value text-muted">Radio Garden / Radio Browser</text>
+        <text class="value text-muted">Radio Garden / 央广音频CDN</text>
       </view>
       <view class="item">
         <text class="label">锁定范围</text>
-        <text class="value">3.0° / 同城 30km</text>
+        <text class="value">同城 30km / 远洋自适应</text>
       </view>
     </view>
   </view>
 
-  <!-- ========== 原理与注意事项 ========== -->
+  <!-- ========== 6. 使用说明 ========== -->
   <view class="section">
     <text class="section-title">使用说明</text>
     <view class="card">
@@ -122,7 +172,7 @@
     </view>
   </view>
 
-  <!-- ========== 关于 ========== -->
+  <!-- ========== 7. 关于 ========== -->
   <view class="section">
     <text class="section-title">关于</text>
     <view class="card">
@@ -132,7 +182,7 @@
       </view>
       <view class="item">
         <text class="label">版本</text>
-        <text class="value text-mono">1.0.0</text>
+        <text class="value text-mono">1.1.0</text>
       </view>
       <view class="item">
         <text class="label">算法</text>

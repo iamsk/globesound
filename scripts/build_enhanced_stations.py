@@ -11,160 +11,120 @@ import os
 import math
 
 CHINA_STATIONS = [
-    # ===== 全国国家级电台 =====
-    {"name": "CNR 中国之声", "url": "https://lhttp.qtfm.cn/live/386/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 200},
-    {"name": "CNR 经济之声", "url": "https://lhttp.qtfm.cn/live/387/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 180},
-    {"name": "CNR 音乐之声 Music Radio", "url": "https://lhttp.qtfm.cn/live/388/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 250},
-    {"name": "CNR 经典音乐广播", "url": "https://lhttp.qtfm.cn/live/389/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "古典", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 160},
-    {"name": "CNR 大湾区之声", "url": "https://lhttp.qtfm.cn/live/392/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 150},
-    {"name": "CNR 中华之声", "url": "https://lhttp.qtfm.cn/live/390/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-    {"name": "CNR 神州之声", "url": "https://lhttp.qtfm.cn/live/391/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
+    # ===== 全国国家级电台 (CNR & CRI) =====
+    {"name": "CNR 中国之声", "url": "http://ngcdn001.cnr.cn/live/zgzs/index.m3u8", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 300},
+    {"name": "CNR 经济之声", "url": "http://ngcdn002.cnr.cn/live/jjzs/index.m3u8", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 260},
+    {"name": "CNR 音乐之声", "url": "http://ngcdn003.cnr.cn/live/yyzs/index.m3u8", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 350},
+    {"name": "CNR 经典音乐广播", "url": "http://ngcdn004.cnr.cn/live/dszs/index.m3u8", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "古典", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 280},
+    {"name": "CNR 大湾区之声", "url": "http://ngcdn007.cnr.cn/live/hxzs/index.m3u8", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "CRI HIT FM 国际流行音乐", "url": "https://satellitepull.cnr.cn/live/wxgjlxyy/playlist.m3u8", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 290},
+    {"name": "CRI 环球资讯广播", "url": "https://satellitepull.cnr.cn/live/wxhqzx01/playlist.m3u8", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
 
-    # ===== 北京 (Beijing) =====
-    {"name": "北京新闻广播", "url": "https://lhttp.qtfm.cn/live/322/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 140},
-    {"name": "北京音乐广播 FM97.4", "url": "https://lhttp.qtfm.cn/live/323/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 170},
-    {"name": "北京交通广播 FM103.9", "url": "https://lhttp.qtfm.cn/live/324/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 160},
-    {"name": "北京文艺广播 FM87.6", "url": "https://lhttp.qtfm.cn/live/325/64k.mp3", "lat": 39.9042, "lon": 116.4074, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-
-    # ===== 上海 (Shanghai) =====
-    {"name": "动感101 FM101.7", "url": "https://lhttp.qtfm.cn/live/266/64k.mp3", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 210},
-    {"name": "经典947 FM94.7", "url": "https://lhttp.qtfm.cn/live/267/64k.mp3", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "古典", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 190},
-    {"name": "第一财经广播", "url": "https://lhttp.qtfm.cn/live/268/64k.mp3", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "上海新闻广播 FM93.4", "url": "https://lhttp.qtfm.cn/live/269/64k.mp3", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 140},
-    {"name": "Love Radio 103.7", "url": "https://lhttp.qtfm.cn/live/271/64k.mp3", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 150},
-    {"name": "上海交通广播 FM105.7", "url": "https://lhttp.qtfm.cn/live/272/64k.mp3", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-
-    # ===== 天津 (Tianjin) =====
-    {"name": "天津新闻广播", "url": "https://lhttp.qtfm.cn/live/343/64k.mp3", "lat": 39.0842, "lon": 117.2009, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "天津音乐广播", "url": "https://lhttp.qtfm.cn/live/344/64k.mp3", "lat": 39.0842, "lon": 117.2009, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "天津交通广播", "url": "https://lhttp.qtfm.cn/live/345/64k.mp3", "lat": 39.0842, "lon": 117.2009, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 100},
-    {"name": "天津相声广播", "url": "https://lhttp.qtfm.cn/live/346/64k.mp3", "lat": 39.0842, "lon": 117.2009, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 150},
+    # ===== 湖北与武汉 (Hubei & Wuhan) =====
+    {"name": "湖北之声", "url": "https://satellitepull.cnr.cn/live/wx32hubzsgb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 260},
+    {"name": "楚天交通广播", "url": "https://satellitepull.cnr.cn/live/wx32hubctjtgb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 270},
+    {"name": "湖北经典音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32hubyygb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 290},
+    {"name": "楚天音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32hubctyygb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 250},
+    {"name": "湖北城市之声", "url": "https://satellitepull.cnr.cn/live/wx32hubjtgb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
+    {"name": "湖北生活广播", "url": "https://satellitepull.cnr.cn/live/wx32hubczshgb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 190},
+    {"name": "湖北亲子广播", "url": "https://satellitepull.cnr.cn/live/wx32hubfnetgb/playlist.m3u8", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 180},
 
     # ===== 重庆 (Chongqing) =====
-    {"name": "重庆之声", "url": "https://lhttp.qtfm.cn/live/1498/64k.mp3", "lat": 29.5630, "lon": 106.5516, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 100},
-    {"name": "重庆交通广播", "url": "https://lhttp.qtfm.cn/live/1499/64k.mp3", "lat": 29.5630, "lon": 106.5516, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "重庆音乐广播", "url": "https://lhttp.qtfm.cn/live/647/64k.mp3", "lat": 29.5630, "lon": 106.5516, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-    {"name": "重庆都市广播", "url": "https://lhttp.qtfm.cn/live/1500/64k.mp3", "lat": 29.5630, "lon": 106.5516, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
-
-    # ===== 广东 (Guangdong) =====
-    {"name": "广东音乐之声", "url": "https://lhttp.qtfm.cn/live/1260/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "流行", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 180},
-    {"name": "广东新闻广播", "url": "https://lhttp.qtfm.cn/live/1254/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 140},
-    {"name": "羊城交通广播", "url": "https://lhttp.qtfm.cn/live/1262/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 150},
-    {"name": "珠江经济台", "url": "https://lhttp.qtfm.cn/live/1259/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "综合", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "广州交通电台", "url": "https://lhttp.qtfm.cn/live/4955/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 100},
-    {"name": "广东文体广播", "url": "https://lhttp.qtfm.cn/live/471/64k.mp3", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "综合", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-
-    # 深圳 (Shenzhen)
-    {"name": "深圳新闻广播", "url": "https://lhttp.qtfm.cn/live/1270/64k.mp3", "lat": 22.5431, "lon": 114.0579, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 150},
-    {"name": "深圳音乐广播 飞扬971", "url": "https://lhttp.qtfm.cn/live/1271/64k.mp3", "lat": 22.5431, "lon": 114.0579, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 180},
-    {"name": "深圳交通广播", "url": "https://lhttp-hw.qtfm.cn/live/1272/64k.mp3", "lat": 22.5431, "lon": 114.0579, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 140},
-    {"name": "深圳生活广播", "url": "https://lhttp.qtfm.cn/live/1273/64k.mp3", "lat": 22.5431, "lon": 114.0579, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "深圳龙岗星光991", "url": "https://lhttp.qingting.fm/live/20160/64k.mp3", "lat": 22.7206, "lon": 114.2468, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-
-    # 佛山、珠海、东莞
-    {"name": "佛山电台真爱946", "url": "https://lhttp.qtfm.cn/live/1283/64k.mp3", "lat": 23.0215, "lon": 113.1214, "country": "China", "cc": "CN", "genre": "流行", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 80},
-    {"name": "珠海交通音乐广播", "url": "https://lhttp.qtfm.cn/live/1281/64k.mp3", "lat": 22.2707, "lon": 113.5767, "country": "China", "cc": "CN", "genre": "流行", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 70},
-    {"name": "东莞音乐广播", "url": "https://lhttp.qtfm.cn/live/1288/64k.mp3", "lat": 23.0207, "lon": 113.7518, "country": "China", "cc": "CN", "genre": "流行", "lang": "cantonese", "bitrate": 64, "codec": "MP3", "clicks": 75},
-
-    # ===== 浙江 (Zhejiang) =====
-    {"name": "浙江之声", "url": "https://lhttp.qtfm.cn/live/1148/64k.mp3", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "动听968 浙江音乐调频", "url": "https://lhttp.qtfm.cn/live/1150/64k.mp3", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 160},
-    {"name": "浙江交通之声", "url": "https://lhttp.qtfm.cn/live/1151/64k.mp3", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 140},
-    {"name": "西湖之声", "url": "https://lhttp.qtfm.cn/live/1156/64k.mp3", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-    {"name": "宁波音乐广播", "url": "https://lhttp.qtfm.cn/live/1162/64k.mp3", "lat": 29.8683, "lon": 121.5440, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
-    {"name": "温州音乐广播", "url": "https://lhttp.qtfm.cn/live/1168/64k.mp3", "lat": 27.9943, "lon": 120.6994, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 70},
-
-    # ===== 江苏 (Jiangsu) =====
-    {"name": "江苏新闻广播", "url": "https://lhttp.qtfm.cn/live/4933/64k.mp3", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "江苏经典流行音乐广播", "url": "https://lhttp.qtfm.cn/live/4938/64k.mp3", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 150},
-    {"name": "江苏交通广播网", "url": "https://lhttp.qtfm.cn/live/4935/64k.mp3", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "南京音乐广播", "url": "https://lhttp.qtfm.cn/live/4946/64k.mp3", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 95},
-    {"name": "苏州音乐广播", "url": "https://lhttp.qtfm.cn/live/4952/64k.mp3", "lat": 31.2990, "lon": 120.5853, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
-    {"name": "无锡音乐广播", "url": "https://lhttp.qtfm.cn/live/4958/64k.mp3", "lat": 31.4912, "lon": 120.3119, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 75},
+    {"name": "重庆音乐广播", "url": "https://satellitepull.cnr.cn/live/wxcqyygb/playlist.m3u8", "lat": 29.5630, "lon": 106.5516, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 260},
 
     # ===== 四川 (Sichuan) =====
-    {"name": "四川交通广播", "url": "https://lhttp.qtfm.cn/live/1749/64k.mp3", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "四川音乐广播 FM90.0", "url": "https://lhttp.qtfm.cn/live/1750/64k.mp3", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 150},
-    {"name": "成都交通广播", "url": "https://lhttp.qtfm.cn/live/1758/64k.mp3", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "成都经济广播", "url": "https://lhttp.qtfm.cn/live/1759/64k.mp3", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
+    {"name": "四川音乐广播·城市之音", "url": "https://satellitepull.cnr.cn/live/wxsccszs/playlist.m3u8", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 280},
+    {"name": "四川综合广播·四川之声", "url": "https://satellitepull.cnr.cn/live/wxsczhgb/playlist.m3u8", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "四川交通广播", "url": "https://satellitepull.cnr.cn/live/wxscjtgb/playlist.m3u8", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "四川岷江音乐", "url": "https://satellitepull.cnr.cn/live/wxscmjyyt/playlist.m3u8", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+    {"name": "四川私家车广播", "url": "https://satellitepull.cnr.cn/live/wxsc925/playlist.m3u8", "lat": 30.5728, "lon": 104.0668, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 200},
 
-    # ===== 湖北 (Hubei) =====
-    {"name": "湖北之声", "url": "https://lhttp.qtfm.cn/live/1018/64k.mp3", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "楚天交通广播", "url": "https://lhttp.qtfm.cn/live/1020/64k.mp3", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "湖北经典音乐广播", "url": "https://lhttp.qtfm.cn/live/1022/64k.mp3", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-    {"name": "武汉新闻广播", "url": "https://lhttp.qtfm.cn/live/1028/64k.mp3", "lat": 30.5928, "lon": 114.3055, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
+    # ===== 广东与深圳 (Guangdong & Shenzhen) =====
+    {"name": "广东音乐之声", "url": "https://satellitepull.cnr.cn/live/wxgdyyzs/playlist.m3u8", "lat": 23.1291, "lon": 113.2644, "country": "China", "cc": "CN", "genre": "流行", "lang": "cantonese", "bitrate": 128, "codec": "AAC", "clicks": 290},
+    {"name": "深圳音乐广播·飞扬971", "url": "https://satellitepull.cnr.cn/live/wxszfy971/playlist.m3u8", "lat": 22.5431, "lon": 114.0579, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 280},
+    {"name": "深圳生活942", "url": "https://satellitepull.cnr.cn/live/wxszsjcgb/playlist.m3u8", "lat": 22.5431, "lon": 114.0579, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
 
-    # ===== 陕西 (Shaanxi) =====
-    {"name": "陕西新闻广播", "url": "https://lhttp.qtfm.cn/live/1865/64k.mp3", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 100},
-    {"name": "陕西音乐广播", "url": "https://lhttp.qtfm.cn/live/1867/64k.mp3", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-    {"name": "陕西戏曲广播", "url": "https://lhttp.qtfm.cn/live/1868/64k.mp3", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "西安音乐广播", "url": "https://lhttp.qtfm.cn/live/1876/64k.mp3", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
+    # ===== 浙江 (Zhejiang) =====
+    {"name": "浙江音乐调频·动听968", "url": "https://satellitepull.cnr.cn/live/wxzj968/playlist.m3u8", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 280},
+    {"name": "浙江之声", "url": "https://satellitepull.cnr.cn/live/wxzjzs/playlist.m3u8", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 250},
+    {"name": "浙江交通之声", "url": "https://satellitepull.cnr.cn/live/wxzjjtgb/playlist.m3u8", "lat": 30.2741, "lon": 120.1551, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
 
-    # ===== 湖南 (Hunan) =====
-    {"name": "湖南金鹰955", "url": "https://lhttp.qtfm.cn/live/910/64k.mp3", "lat": 28.2282, "lon": 112.9388, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 140},
-    {"name": "湖南交通频道", "url": "https://lhttp.qtfm.cn/live/911/64k.mp3", "lat": 28.2282, "lon": 112.9388, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "湖南音乐之声", "url": "https://lhttp.qtfm.cn/live/913/64k.mp3", "lat": 28.2282, "lon": 112.9388, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "长沙音乐广播", "url": "https://lhttp.qtfm.cn/live/921/64k.mp3", "lat": 28.2282, "lon": 112.9388, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
+    # ===== 江苏 (Jiangsu) =====
+    {"name": "江苏音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32jsyygb/playlist.m3u8", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 270},
+    {"name": "江苏经典流行音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32jsjdlxyy/playlist.m3u8", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 260},
+    {"name": "江苏新闻综合广播", "url": "https://satellitepull.cnr.cn/live/wx32jsxwzhgb/playlist.m3u8", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "江苏文艺广播", "url": "https://satellitepull.cnr.cn/live/wx32jswygb/playlist.m3u8", "lat": 32.0603, "lon": 118.7969, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 200},
+
+    # ===== 上海 (Shanghai) =====
+    {"name": "上海长三角之声", "url": "https://satellitepull.cnr.cn/live/wx32dfgbdt/playlist.m3u8", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "上海第一财经广播", "url": "https://satellitepull.cnr.cn/live/wx32dycjgb/playlist.m3u8", "lat": 31.2304, "lon": 121.4737, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
 
     # ===== 河南 (Henan) =====
-    {"name": "河南新闻广播", "url": "https://lhttp.qtfm.cn/live/801/64k.mp3", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 95},
-    {"name": "河南音乐广播", "url": "https://lhttp.qtfm.cn/live/803/64k.mp3", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 120},
-    {"name": "河南戏曲广播", "url": "https://lhttp.qtfm.cn/live/805/64k.mp3", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 115},
-    {"name": "郑州音乐广播", "url": "https://lhttp.qtfm.cn/live/812/64k.mp3", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
+    {"name": "河南音乐广播", "url": "https://stream.hndt.com/live/yinyue/playlist.m3u8", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 250},
+    {"name": "河南新闻广播", "url": "https://stream.hndt.com/live/xinwen/playlist.m3u8", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "河南交通广播", "url": "https://stream.hndt.com/live/jiaotong/playlist.m3u8", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "河南戏曲广播", "url": "https://stream.hndt.com/live/yule/playlist.m3u8", "lat": 34.7466, "lon": 113.6253, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
+
+    # ===== 陕西 (Shaanxi) =====
+    {"name": "陕西音乐广播", "url": "https://satellitepull.cnr.cn/live/wxsxxyygb/playlist.m3u8", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "陕西新闻广播", "url": "https://satellitepull.cnr.cn/live/wxsxxxwgb/playlist.m3u8", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "陕西交通广播", "url": "https://satellitepull.cnr.cn/live/wxsxxjtgb/playlist.m3u8", "lat": 34.3416, "lon": 108.9398, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
 
     # ===== 山东 (Shandong) =====
-    {"name": "山东新闻广播", "url": "https://lhttp.qtfm.cn/live/745/64k.mp3", "lat": 36.6512, "lon": 117.1201, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 100},
-    {"name": "山东音乐广播", "url": "https://lhttp.qtfm.cn/live/746/64k.mp3", "lat": 36.6512, "lon": 117.1201, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "济南音乐广播", "url": "https://lhttp.qtfm.cn/live/756/64k.mp3", "lat": 36.6512, "lon": 117.1201, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
-    {"name": "青岛音乐体育广播", "url": "https://lhttp.qtfm.cn/live/762/64k.mp3", "lat": 36.0671, "lon": 120.3826, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 105},
-    {"name": "青岛新闻广播", "url": "https://lhttp.qtfm.cn/live/761/64k.mp3", "lat": 36.0671, "lon": 120.3826, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
+    {"name": "山东音乐广播", "url": "https://satellitepull.cnr.cn/live/wxsdyygb/playlist.m3u8", "lat": 36.6512, "lon": 117.1201, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "山东交通广播", "url": "https://satellitepull.cnr.cn/live/wxsdjtgb/playlist.m3u8", "lat": 36.6512, "lon": 117.1201, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+
+    # ===== 湖南 (Hunan) =====
+    {"name": "湖南文艺广播·摩登音乐台", "url": "https://satellitepull.cnr.cn/live/wx32hunwygb/playlist.m3u8", "lat": 28.2282, "lon": 112.9388, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 250},
+    {"name": "湖南旅游广播", "url": "https://satellitepull.cnr.cn/live/wx32hunlygb/playlist.m3u8", "lat": 28.2282, "lon": 112.9388, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+
+    # ===== 安徽 (Anhui) =====
+    {"name": "安徽音乐广播", "url": "https://satellitepull.cnr.cn/live/wxahyygb/playlist.m3u8", "lat": 31.8206, "lon": 117.2272, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "安徽之声", "url": "https://satellitepull.cnr.cn/live/wxahxxgb/playlist.m3u8", "lat": 31.8206, "lon": 117.2272, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
 
     # ===== 福建 (Fujian) =====
-    {"name": "福建音乐广播", "url": "https://lhttp.qtfm.cn/live/1341/64k.mp3", "lat": 26.0745, "lon": 119.2965, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "福建新闻广播", "url": "https://lhttp.qtfm.cn/live/1340/64k.mp3", "lat": 26.0745, "lon": 119.2965, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "厦门音乐广播", "url": "https://lhttp.qtfm.cn/live/1352/64k.mp3", "lat": 24.4798, "lon": 118.0894, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 130},
-    {"name": "厦门新闻广播", "url": "https://lhttp.qtfm.cn/live/1351/64k.mp3", "lat": 24.4798, "lon": 118.0894, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "minnan", "bitrate": 64, "codec": "MP3", "clicks": 95},
+    {"name": "福建汽车音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32fjdnyygb/playlist.m3u8", "lat": 26.0745, "lon": 119.2965, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 240},
+    {"name": "福建东南广播", "url": "https://satellitepull.cnr.cn/live/wx32fjdngb/playlist.m3u8", "lat": 26.0745, "lon": 119.2965, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
 
-    # ===== 东北地区 (Liaoning, Jilin, Heilongjiang) =====
-    {"name": "辽宁经典音乐广播", "url": "https://lhttp.qtfm.cn/live/525/64k.mp3", "lat": 41.8057, "lon": 123.4315, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 110},
-    {"name": "辽宁交通广播", "url": "https://lhttp.qtfm.cn/live/524/64k.mp3", "lat": 41.8057, "lon": 123.4315, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 100},
-    {"name": "大连音乐广播", "url": "https://lhttp.qtfm.cn/live/541/64k.mp3", "lat": 38.9140, "lon": 121.6147, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "吉林音乐广播", "url": "https://lhttp.qtfm.cn/live/572/64k.mp3", "lat": 43.8171, "lon": 125.3235, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
-    {"name": "黑龙江音乐广播", "url": "https://lhttp.qtfm.cn/live/624/64k.mp3", "lat": 45.8038, "lon": 126.5349, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 95},
-    {"name": "哈尔滨音乐广播", "url": "https://lhttp.qtfm.cn/live/633/64k.mp3", "lat": 45.8038, "lon": 126.5349, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
+    # ===== 江西 (Jiangxi) =====
+    {"name": "江西音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32jiangxyygb/playlist.m3u8", "lat": 28.6820, "lon": 115.8579, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "江西都市广播", "url": "https://satellitepull.cnr.cn/live/wx32jiangxdsgb/playlist.m3u8", "lat": 28.6820, "lon": 115.8579, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
 
-    # ===== 西南与华南 (Yunnan, Guizhou, Guangxi, Hainan) =====
-    {"name": "云南音乐广播", "url": "https://lhttp.qtfm.cn/live/1932/64k.mp3", "lat": 25.0406, "lon": 102.7123, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 95},
-    {"name": "昆明汽车广播", "url": "https://lhttp.qtfm.cn/live/1936/64k.mp3", "lat": 25.0406, "lon": 102.7123, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 75},
-    {"name": "贵州音乐广播", "url": "https://lhttp.qtfm.cn/live/1806/64k.mp3", "lat": 26.6477, "lon": 106.6302, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
-    {"name": "广西音乐广播", "url": "https://lhttp.qtfm.cn/live/1435/64k.mp3", "lat": 22.8170, "lon": 108.3665, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "海南音乐广播", "url": "https://lhttp.qtfm.cn/live/1461/64k.mp3", "lat": 20.0440, "lon": 110.1999, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "三亚之声", "url": "https://lhttp.qtfm.cn/live/1467/64k.mp3", "lat": 18.2528, "lon": 109.5120, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
+    # ===== 河北 (Hebei) =====
+    {"name": "河北音乐广播", "url": "https://satellitepull.cnr.cn/live/wxhebyygb/playlist.m3u8", "lat": 38.0428, "lon": 114.5149, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "河北综合广播", "url": "https://satellitepull.cnr.cn/live/wxhebzhgb/playlist.m3u8", "lat": 38.0428, "lon": 114.5149, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
 
-    # ===== 中部与其他省份 (Jiangxi, Anhui, Shanxi, Hebei) =====
-    {"name": "江西音乐广播", "url": "https://lhttp.qtfm.cn/live/1085/64k.mp3", "lat": 28.6820, "lon": 115.8579, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
-    {"name": "安徽音乐广播", "url": "https://lhttp.qtfm.cn/live/1202/64k.mp3", "lat": 31.8206, "lon": 117.2272, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "山西音乐广播", "url": "https://lhttp.qtfm.cn/live/420/64k.mp3", "lat": 37.8706, "lon": 112.5489, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 80},
-    {"name": "河北音乐广播", "url": "https://lhttp.qtfm.cn/live/366/64k.mp3", "lat": 38.0428, "lon": 114.5149, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
+    # ===== 云南与贵州 (Yunnan & Guizhou) =====
+    {"name": "云南音乐广播", "url": "https://satellitepull.cnr.cn/live/wxynyygb/playlist.m3u8", "lat": 25.0406, "lon": 102.7123, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "云南新闻广播", "url": "https://satellitepull.cnr.cn/live/wxynxwgb/playlist.m3u8", "lat": 25.0406, "lon": 102.7123, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
+    {"name": "贵州音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32gzyygb/playlist.m3u8", "lat": 26.6477, "lon": 106.6302, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
 
-    # ===== 西北与边疆 (Gansu, Inner Mongolia, Xinjiang, Ningxia, Qinghai, Tibet) =====
-    {"name": "甘肃都市音乐广播", "url": "https://lhttp.qtfm.cn/live/1983/64k.mp3", "lat": 36.0611, "lon": 103.8343, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 75},
-    {"name": "内蒙古音乐之声", "url": "https://lhttp.qtfm.cn/live/470/64k.mp3", "lat": 40.8424, "lon": 111.7500, "country": "China", "cc": "CN", "genre": "乡村·民谣", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 85},
-    {"name": "新疆音乐广播", "url": "https://lhttp.qtfm.cn/live/2091/64k.mp3", "lat": 43.8256, "lon": 87.6168, "country": "China", "cc": "CN", "genre": "乡村·民谣", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 90},
-    {"name": "宁夏音乐广播", "url": "https://lhttp.qtfm.cn/live/2043/64k.mp3", "lat": 38.4872, "lon": 106.2309, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 70},
-    {"name": "青海交通音乐广播", "url": "https://lhttp.qtfm.cn/live/2068/64k.mp3", "lat": 36.6171, "lon": 101.7782, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 70},
-    {"name": "西藏汉语综合广播", "url": "https://lhttp.qtfm.cn/live/2126/64k.mp3", "lat": 29.6525, "lon": 91.1721, "country": "China", "cc": "CN", "genre": "综合", "lang": "chinese", "bitrate": 64, "codec": "MP3", "clicks": 95},
+    # ===== 广西与海南 (Guangxi & Hainan) =====
+    {"name": "广西音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32gxwygb/playlist.m3u8", "lat": 22.8170, "lon": 108.3665, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "广西综合广播", "url": "https://satellitepull.cnr.cn/live/wx32gxrmgb/playlist.m3u8", "lat": 22.8170, "lon": 108.3665, "country": "China", "cc": "CN", "genre": "新闻·谈话", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
+    {"name": "海南音乐广播", "url": "https://satellitepull.cnr.cn/live/wxhainyygb/playlist.m3u8", "lat": 20.0440, "lon": 110.1999, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+
+    # ===== 东北 (Liaoning, Heilongjiang) =====
+    {"name": "辽宁经典音乐广播", "url": "https://satellitepull.cnr.cn/live/wxlnwygb/playlist.m3u8", "lat": 41.8057, "lon": 123.4315, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 230},
+    {"name": "黑龙江音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32hljyygb/playlist.m3u8", "lat": 45.8038, "lon": 126.5349, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+
+    # ===== 边疆与少数民族广播 =====
+    {"name": "内蒙古音乐之声", "url": "https://satellitepull.cnr.cn/live/wx32nmgyygb/playlist.m3u8", "lat": 40.8424, "lon": 111.7500, "country": "China", "cc": "CN", "genre": "乡村·民谣", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+    {"name": "新疆私家车广播", "url": "https://satellitepull.cnr.cn/live/wxxjsjcgb/playlist.m3u8", "lat": 43.8256, "lon": 87.6168, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+    {"name": "甘肃青春调频", "url": "https://satellitepull.cnr.cn/live/wxgsqcgb/playlist.m3u8", "lat": 36.0611, "lon": 103.8343, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 210},
+    {"name": "宁夏音乐广播", "url": "https://satellitepull.cnr.cn/live/wxnxyygb/playlist.m3u8", "lat": 38.4872, "lon": 106.2309, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 200},
+    {"name": "青海交通音乐广播", "url": "https://satellitepull.cnr.cn/live/wx32qhjtyygb/playlist.m3u8", "lat": 36.6171, "lon": 101.7782, "country": "China", "cc": "CN", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "AAC", "clicks": 200},
 
     # ===== 港澳台 (Hong Kong, Macau, Taiwan) =====
-    {"name": "香港电台第一台 RTHK 1", "url": "https://rthk.radica.com/radio1", "lat": 22.3193, "lon": 114.1694, "country": "Hong Kong", "cc": "HK", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 128, "codec": "MP3", "clicks": 180},
-    {"name": "香港电台第二台 RTHK 2 流行音乐", "url": "https://rthk.radica.com/radio2", "lat": 22.3193, "lon": 114.1694, "country": "Hong Kong", "cc": "HK", "genre": "流行", "lang": "cantonese", "bitrate": 128, "codec": "MP3", "clicks": 220},
-    {"name": "香港电台第四台 RTHK 4 古典与爵士", "url": "https://rthk.radica.com/radio4", "lat": 22.3193, "lon": 114.1694, "country": "Hong Kong", "cc": "HK", "genre": "古典", "lang": "english", "bitrate": 128, "codec": "MP3", "clicks": 190},
-    {"name": "澳门电台 中文频道 FM100.7", "url": "https://tdmchlive.tdm.com.mo/tdm/ch1.live/playlist.m3u8", "lat": 22.1987, "lon": 113.5439, "country": "Macau", "cc": "MO", "genre": "综合", "lang": "cantonese", "bitrate": 128, "codec": "AAC", "clicks": 110},
-    {"name": "台北之音 Hit FM 联播网 FM107.7", "url": "https://stream.hitfm.tw:8000/hitfm.mp3", "lat": 25.0330, "lon": 121.5654, "country": "Taiwan", "cc": "TW", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 240},
-    {"name": "中广流行网 i like radio", "url": "https://stream.bcc.com.tw:8000/bcc_pop", "lat": 25.0330, "lon": 121.5654, "country": "Taiwan", "cc": "TW", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 180},
-    {"name": "飞碟联播网 UFO Radio FM92.1", "url": "https://stream.uforadio.com.tw:8000/ufo", "lat": 25.0330, "lon": 121.5654, "country": "Taiwan", "cc": "TW", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 150},
-    {"name": "IC之音竹科广播 FM97.5", "url": "https://stream.ic975.com:8000/live", "lat": 24.8138, "lon": 120.9675, "country": "Taiwan", "cc": "TW", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 90},
-    {"name": "高雄港都电台 Best Radio FM98.3", "url": "https://stream.bestradio.com.tw:8000/best983", "lat": 22.6273, "lon": 120.3014, "country": "Taiwan", "cc": "TW", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 100},
+    {"name": "香港电台第一台 RTHK 1", "url": "https://rthk.radica.com/radio1", "lat": 22.3193, "lon": 114.1694, "country": "Hong Kong", "cc": "HK", "genre": "新闻·谈话", "lang": "cantonese", "bitrate": 128, "codec": "MP3", "clicks": 260},
+    {"name": "香港电台第二台 RTHK 2 流行音乐", "url": "https://rthk.radica.com/radio2", "lat": 22.3193, "lon": 114.1694, "country": "Hong Kong", "cc": "HK", "genre": "流行", "lang": "cantonese", "bitrate": 128, "codec": "MP3", "clicks": 290},
+    {"name": "香港电台第四台 RTHK 4 古典与爵士", "url": "https://rthk.radica.com/radio4", "lat": 22.3193, "lon": 114.1694, "country": "Hong Kong", "cc": "HK", "genre": "古典", "lang": "english", "bitrate": 128, "codec": "MP3", "clicks": 240},
+    {"name": "澳门电台 中文频道 FM100.7", "url": "https://tdmchlive.tdm.com.mo/tdm/ch1.live/playlist.m3u8", "lat": 22.1987, "lon": 113.5439, "country": "Macau", "cc": "MO", "genre": "综合", "lang": "cantonese", "bitrate": 128, "codec": "AAC", "clicks": 220},
+    {"name": "台北之音 Hit FM 联播网 FM107.7", "url": "https://stream.hitfm.tw:8000/hitfm.mp3", "lat": 25.0330, "lon": 121.5654, "country": "Taiwan", "cc": "TW", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 280},
+    {"name": "中广流行网 i like radio", "url": "https://stream.bcc.com.tw:8000/bcc_pop", "lat": 25.0330, "lon": 121.5654, "country": "Taiwan", "cc": "TW", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 250},
+    {"name": "飞碟联播网 UFO Radio FM92.1", "url": "https://stream.uforadio.com.tw:8000/ufo", "lat": 25.0330, "lon": 121.5654, "country": "Taiwan", "cc": "TW", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 230},
+    {"name": "IC之音竹科广播 FM97.5", "url": "https://stream.ic975.com:8000/live", "lat": 24.8138, "lon": 120.9675, "country": "Taiwan", "cc": "TW", "genre": "综合", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 180},
+    {"name": "高雄港都电台 Best Radio FM98.3", "url": "https://stream.bestradio.com.tw:8000/best983", "lat": 22.6273, "lon": 120.3014, "country": "Taiwan", "cc": "TW", "genre": "流行", "lang": "chinese", "bitrate": 128, "codec": "MP3", "clicks": 190},
 ]
 
 # ===== Radio Garden / RoamDial 国际经典电台 =====
@@ -263,6 +223,11 @@ def main():
         json.dump(curated_list, f, ensure_ascii=False, indent=2)
     print(f"Saved {len(curated_list)} curated stations to {mp_extra_path}")
 
+    mp_extra_js = os.path.join(root, "miniprogram/data/stations_extra.js")
+    with open(mp_extra_js, "w", encoding="utf-8") as f:
+        f.write("module.exports = " + json.dumps(curated_list, ensure_ascii=False, separators=(',', ':')) + ";\n")
+    print(f"Saved {len(curated_list)} curated stations to {mp_extra_js}")
+
     # 2. Merge with existing stations_cache.json to create a high-quality ~1,500 station dataset for miniprogram
     cache_rows = []
     if os.path.exists(cache_path):
@@ -277,6 +242,10 @@ def main():
                     continue
                 # Skip Radio Browser's bugged China stations that were in Turkey or Atlantic
                 if (s.get("cc") == "CN" or s.get("country") == "China") and (lon < 70 or lon > 136 or lat < 15 or lat > 54):
+                    continue
+                # Skip dead QingTing FM direct streams (returning 400 Bad Request)
+                url = s.get("url", "")
+                if "qtfm.cn" in url:
                     continue
                 cache_rows.append(s)
 
@@ -301,6 +270,15 @@ def main():
     
     file_size_kb = os.path.getsize(mp_all_path) / 1024
     print(f"Saved {len(all_stations_list)} stations to {mp_all_path} ({file_size_kb:.1f} KB)")
+
+    mp_all_js = os.path.join(root, "miniprogram/data/stations.js")
+    rows = [[s.get(field) for field in FIELDS] for s in all_stations_list]
+    with open(mp_all_js, "w", encoding="utf-8") as f:
+        f.write(f"const fields = {json.dumps(FIELDS, ensure_ascii=False)};\n")
+        f.write(f"const rows = {json.dumps(rows, ensure_ascii=False, separators=(',', ':'))};\n")
+        f.write("module.exports = rows.map(r => Object.fromEntries(fields.map((f, i) => [f, r[i]])));\n")
+    js_size_kb = os.path.getsize(mp_all_js) / 1024
+    print(f"Saved {len(all_stations_list)} stations to {mp_all_js} ({js_size_kb:.1f} KB)")
 
     # 3. Update stations_cache.json by running stations.load_or_fetch
     import sys
