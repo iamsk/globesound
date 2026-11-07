@@ -13,6 +13,14 @@
       {
         "type": "file",
         "value": "data/kids_zones.json"
+      },
+      {
+        "type": "glob",
+        "value": "**/*.tmp*"
+      },
+      {
+        "type": "suffix",
+        "value": ".tmp.mp3"
       }
     ],
     "include": []
